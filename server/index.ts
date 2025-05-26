@@ -4,8 +4,40 @@ import { setupVite, serveStatic, log } from "./vite";
 import { errorHandler, requestLogger } from "./middleware";
 import { startNotificationScheduler } from "./notification-scheduler";
 import { cache } from "./cache";
+import { setupAuth } from "./auth";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app = express();
+
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: "Too many requests from this IP, please try again later."
+});
+app.use(limiter);
+
+// API rate limiting (more strict)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  message: "Too many API requests, please try again later."
+});
+app.use('/api/', apiLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(requestLogger);
@@ -43,6 +75,9 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize Redis cache
   await cache.connect();
+  
+  // Setup authentication
+  setupAuth(app);
   
   const server = await registerRoutes(app);
 
