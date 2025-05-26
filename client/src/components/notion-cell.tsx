@@ -96,7 +96,9 @@ export default function NotionCell({
           "h-8 border-0 bg-transparent hover:bg-slate-50 focus:bg-white focus:border-slate-200",
           readOnly && "opacity-60 cursor-not-allowed"
         )}>
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder}>
+            {value || placeholder}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => (
