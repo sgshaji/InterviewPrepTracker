@@ -16,11 +16,10 @@ export default function Preparation() {
   const [showEmailConfig, setShowEmailConfig] = useState(false);
   const [emailSettings, setEmailSettings] = useState({
     email: '',
-    enableAlerts: false,
+    enableDailyReminders: false,
     enableCongratulations: true,
-    missedDaysThreshold: 2,
-    reminderTimes: ['21:00'], // Support multiple reminder times
-    reminderTemplate: `Subject: Missing Preparation Entry for {date}
+    reminderTimes: ['21:00'], // Times to check and send reminders
+    reminderTemplate: `Subject: 🚨 Missing Preparation Entry for {date}
 
 Hi {userName},
 
@@ -32,7 +31,7 @@ Take 5 minutes to reflect and fill in your prep log to stay consistent.
 
 You've got this!
 – Interview Prep Tracker`,
-    congratsTemplate: `Subject: Great job on your preparation today! 🎉
+    congratsTemplate: `Subject: 🎉 Great job on your preparation today!
 
 Hi {userName},
 
@@ -72,66 +71,87 @@ You're building great habits!
                 Email Alerts
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Email Alert Configuration</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.email@example.com"
-                    value={emailSettings.email}
-                    onChange={(e) => setEmailSettings(prev => ({ ...prev, email: e.target.value }))}
-                  />
+                <DialogTitle>📧 Daily Email Notifications</DialogTitle>
+                <div className="text-sm text-slate-600">
+                  Configure automatic daily emails for preparation tracking
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="enable-alerts">Enable preparation reminders</Label>
-                  <Switch
-                    id="enable-alerts"
-                    checked={emailSettings.enableAlerts}
-                    onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, enableAlerts: checked }))}
-                  />
+              </DialogHeader>
+              
+              <div className="space-y-6 py-4">
+                {/* Basic Settings */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-slate-900">Basic Settings</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="your.email@example.com"
+                      value={emailSettings.email}
+                      onChange={(e) => setEmailSettings(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="enable-congrats">Send congratulations for completed prep</Label>
-                  <Switch
-                    id="enable-congrats"
-                    checked={emailSettings.enableCongratulations}
-                    onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, enableCongratulations: checked }))}
-                  />
+                {/* Notification Types */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-slate-900">Notification Types</h3>
+                  
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <Label htmlFor="enable-reminders" className="font-medium text-red-900">🚨 Missing Preparation Alerts</Label>
+                        <p className="text-sm text-red-700">High priority emails when you haven't logged preparation</p>
+                      </div>
+                      <Switch
+                        id="enable-reminders"
+                        checked={emailSettings.enableDailyReminders}
+                        onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, enableDailyReminders: checked }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="enable-congrats" className="font-medium text-green-900">🎉 Completion Celebrations</Label>
+                        <p className="text-sm text-green-700">Positive emails when you complete all prep categories</p>
+                      </div>
+                      <Switch
+                        id="enable-congrats"
+                        checked={emailSettings.enableCongratulations}
+                        onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, enableCongratulations: checked }))}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="threshold">Send alert after missing (days)</Label>
-                  <Input
-                    id="threshold"
-                    type="number"
-                    min="0"
-                    max="7"
-                    value={emailSettings.missedDaysThreshold}
-                    onChange={(e) => setEmailSettings(prev => ({ ...prev, missedDaysThreshold: parseInt(e.target.value) }))}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Daily reminder times</Label>
-                  <div className="space-y-2">
+                {/* Timing Settings */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-slate-900">Check Times</h3>
+                  <p className="text-sm text-slate-600">
+                    Set times when the system checks your preparation status and sends emails accordingly
+                  </p>
+                  
+                  <div className="space-y-3">
                     {emailSettings.reminderTimes.map((time, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        <Input
-                          type="time"
-                          value={time}
-                          onChange={(e) => {
-                            const newTimes = [...emailSettings.reminderTimes];
-                            newTimes[index] = e.target.value;
-                            setEmailSettings(prev => ({ ...prev, reminderTimes: newTimes }));
-                          }}
-                        />
+                      <div key={index} className="flex items-center space-x-2 bg-slate-50 p-3 rounded-lg">
+                        <div className="flex-1">
+                          <Label className="text-sm">Check Time {index + 1}</Label>
+                          <Input
+                            type="time"
+                            value={time}
+                            onChange={(e) => {
+                              const newTimes = [...emailSettings.reminderTimes];
+                              newTimes[index] = e.target.value;
+                              setEmailSettings(prev => ({ ...prev, reminderTimes: newTimes }));
+                            }}
+                            className="mt-1"
+                          />
+                        </div>
                         {emailSettings.reminderTimes.length > 1 && (
                           <Button
                             type="button"
@@ -147,6 +167,7 @@ You're building great habits!
                         )}
                       </div>
                     ))}
+                    
                     <Button
                       type="button"
                       variant="outline"
@@ -157,39 +178,45 @@ You're building great habits!
                           reminderTimes: [...prev.reminderTimes, '09:00'] 
                         }));
                       }}
+                      className="w-full"
                     >
-                      Add Another Time
+                      + Add Another Check Time
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="reminderTemplate">Reminder Email Template</Label>
-                  <Textarea
-                    id="reminderTemplate"
-                    rows={6}
-                    value={emailSettings.reminderTemplate}
-                    onChange={(e) => setEmailSettings(prev => ({ ...prev, reminderTemplate: e.target.value }))}
-                    placeholder="Customize your reminder email..."
-                    className="font-mono text-sm"
-                  />
-                  <div className="text-xs text-slate-500">
-                    Available variables: {"{date}"}, {"{userName}"}, {"{missingCategories}"}
-                  </div>
-                </div>
+                {/* Email Templates */}
+                <div className="space-y-4">
+                  <h3 className="font-medium text-slate-900">Email Templates</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="reminderTemplate" className="text-red-900 font-medium">🚨 Missing Preparation Alert Template</Label>
+                      <Textarea
+                        id="reminderTemplate"
+                        rows={5}
+                        value={emailSettings.reminderTemplate}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, reminderTemplate: e.target.value }))}
+                        className="font-mono text-sm mt-2"
+                      />
+                      <div className="text-xs text-slate-500 mt-1">
+                        Variables: {"{date}"}, {"{userName}"}, {"{missingCategories}"}
+                      </div>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="congratsTemplate">Congratulations Email Template</Label>
-                  <Textarea
-                    id="congratsTemplate"
-                    rows={6}
-                    value={emailSettings.congratsTemplate}
-                    onChange={(e) => setEmailSettings(prev => ({ ...prev, congratsTemplate: e.target.value }))}
-                    placeholder="Customize your congratulations email..."
-                    className="font-mono text-sm"
-                  />
-                  <div className="text-xs text-slate-500">
-                    Available variables: {"{date}"}, {"{userName}"}, {"{completedCategories}"}
+                    <div>
+                      <Label htmlFor="congratsTemplate" className="text-green-900 font-medium">🎉 Completion Celebration Template</Label>
+                      <Textarea
+                        id="congratsTemplate"
+                        rows={5}
+                        value={emailSettings.congratsTemplate}
+                        onChange={(e) => setEmailSettings(prev => ({ ...prev, congratsTemplate: e.target.value }))}
+                        className="font-mono text-sm mt-2"
+                      />
+                      <div className="text-xs text-slate-500 mt-1">
+                        Variables: {"{date}"}, {"{userName}"}, {"{completedCategories}"}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 

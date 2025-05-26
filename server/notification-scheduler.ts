@@ -4,9 +4,8 @@ import { PREPARATION_TOPICS } from '../client/src/lib/constants';
 
 interface EmailSettings {
   email: string;
-  enableAlerts: boolean;
+  enableDailyReminders: boolean;
   enableCongratulations: boolean;
-  missedDaysThreshold: number;
   reminderTimes: string[];
   reminderTemplate: string;
   congratsTemplate: string;
@@ -20,7 +19,7 @@ export function saveEmailSettings(userId: number, settings: EmailSettings) {
   console.log(`📧 Email settings saved for user ${userId}:`, {
     email: settings.email,
     reminderTimes: settings.reminderTimes,
-    enableAlerts: settings.enableAlerts,
+    enableDailyReminders: settings.enableDailyReminders,
     enableCongratulations: settings.enableCongratulations
   });
 }
@@ -41,7 +40,7 @@ export async function checkAndSendDailyNotifications() {
 
   // Check all users with email settings
   for (const [userId, settings] of Array.from(userEmailSettings.entries())) {
-    if (!settings.enableAlerts && !settings.enableCongratulations) {
+    if (!settings.enableDailyReminders && !settings.enableCongratulations) {
       continue;
     }
 
@@ -76,7 +75,7 @@ export async function checkAndSendDailyNotifications() {
         // For now, we'll log this - the congratulations functionality is ready for when needed
       }
       // Send reminder if there are missing categories
-      else if (settings.enableAlerts && missedCategories.length > 0) {
+      else if (settings.enableDailyReminders && missedCategories.length > 0) {
         const success = await sendPrepReminder({
           userName: user.username,
           email: settings.email,
