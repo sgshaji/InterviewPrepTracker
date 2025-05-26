@@ -56,7 +56,12 @@ export function setupAuth(app: Express) {
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
-      const user = await storage.getUserByUsername(username);
+      // Try to find user by email first, then by username
+      let user = await storage.getUserByEmail(username);
+      if (!user) {
+        user = await storage.getUserByUsername(username);
+      }
+      
       if (!user || !(await comparePasswords(password, user.password))) {
         return done(null, false);
       } else {
@@ -74,30 +79,41 @@ export function setupAuth(app: Express) {
   // Registration endpoint
   app.post("/api/register", async (req, res, next) => {
     try {
-      const { username, password } = req.body;
+      const { username, email, name, password } = req.body;
       
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
+      if (!username || !email || !name || !password) {
+        return res.status(400).json({ message: "All fields are required" });
       }
 
+      // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Check if email already exists
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
       const user = await storage.createUser({
         username,
-        email: req.body.email || `${username}@example.com`, // Temporary email if not provided
-        name: req.body.name || username,
+        email,
+        name,
         password: await hashPassword(password),
-        role: req.body.role || "user",
-        isAdmin: req.body.email === 'sgshaji@gmail.com',
-        subscriptionStatus: req.body.email === 'sgshaji@gmail.com' ? 'active' : 'inactive',
+        role: "user",
+        subscriptionStatus: email === 'sgshaji@gmail.com' ? 'active' : 'inactive',
       });
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json({ id: user.id, username: user.username });
+        res.status(201).json({ 
+          id: user.id, 
+          username: user.username, 
+          email: user.email,
+          name: user.name 
+        });
       });
     } catch (error) {
       next(error);
