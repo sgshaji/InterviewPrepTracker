@@ -9,11 +9,11 @@ export const APPLICATION_STAGES = [
   "No Callback",
   "In Review",
   "HR Round",
-  "HM Round",
-  "Case Study",
-  "Panel",
-  "Offer",
-  "Rejected"
+  "Hiring Manager Round",
+  "Case Study/Assignment",
+  "Panel Interview",
+  "Final Round",
+  "Offer"
 ] as const;
 
 export const ROLE_TITLES = [
