@@ -24,7 +24,11 @@ type LoginData = {
 
 type RegisterData = {
   username: string;
+  email: string;
+  name: string;
   password: string;
+  role?: string;
+  subscriptionStatus?: string;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
