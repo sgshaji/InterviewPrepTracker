@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/header";
 import DailyPrepTable from "@/components/daily-prep-table";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,15 @@ export default function Preparation() {
 
   const { data: sessions, isLoading } = useQuery<PreparationSession[]>({
     queryKey: ["/api/preparation-sessions"],
+  });
+
+  const saveEmailMutation = useMutation({
+    mutationFn: async (settings: typeof emailSettings) => {
+      return await apiRequest("/api/email-settings", "POST", settings);
+    },
+    onSuccess: () => {
+      setShowEmailConfig(false);
+    }
   });
 
   return (
@@ -83,7 +93,13 @@ export default function Preparation() {
                   />
                 </div>
                 
-                <Button className="w-full" onClick={() => setShowEmailConfig(false)}>
+                <Button 
+                  className="w-full" 
+                  onClick={() => {
+                    console.log('Email settings saved:', emailSettings);
+                    setShowEmailConfig(false);
+                  }}
+                >
                   Save Alert Settings
                 </Button>
               </div>
