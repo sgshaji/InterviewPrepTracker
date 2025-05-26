@@ -87,8 +87,12 @@ export function setupAuth(app: Express) {
 
       const user = await storage.createUser({
         username,
+        email: req.body.email || `${username}@example.com`, // Temporary email if not provided
+        name: req.body.name || username,
         password: await hashPassword(password),
-        name: username, // Use username as display name initially
+        role: req.body.role || "user",
+        isAdmin: req.body.email === 'sgshaji@gmail.com',
+        subscriptionStatus: req.body.email === 'sgshaji@gmail.com' ? 'active' : 'inactive',
       });
 
       req.login(user, (err) => {
