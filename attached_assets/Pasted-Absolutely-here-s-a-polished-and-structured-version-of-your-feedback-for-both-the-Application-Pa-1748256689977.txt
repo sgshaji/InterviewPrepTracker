@@ -1,0 +1,84 @@
+Absolutely — here’s a polished and structured version of your feedback for both the **Application Page** and **Preparation Page**, rewritten with clarity, context, and implementation precision.
+
+---
+
+## ✅ Application Page Feedback
+
+### 1. Remove “Follow-Up Date” Column
+
+* **Action:** Eliminate the `Follow-Up Date` column from both the UI table and the data model if not used elsewhere.
+* **Rationale:** It's currently unused or inconsistently populated. Follow-ups can be managed via reminders or tasks in the Interview Tracker instead.
+
+### 2. Adjust Column Widths for Readability
+
+* **Action:** Resize columns to ensure dropdown values (e.g., `Application Stage`, `Job Status`) are **fully visible** without truncation.
+* **Suggested Fix:** Use content-aware sizing or set min-widths for dropdown columns. Allow horizontal scroll if necessary on smaller screens.
+
+### 3. Auto-fill “Application Stage” for Applied Roles
+
+* **Action:** For all entries where `Job Status = Applied` and `Application Stage` is empty, default the stage to `In Review`.
+* **Rationale:** Prevents logic breaks later when determining interview readiness or status-based flows.
+
+### 4. Auto-fill “Application Stage” for Rejected Entries
+
+* **Action:** If `Job Status = Rejected` and `Application Stage` is blank, default `Application Stage = Rejected`.
+* **Rationale:** Ensures consistency in downstream filtering, reporting, and rejection analysis.
+
+---
+
+## ✅ Preparation Page Feedback
+
+### 1. Remove Future-Dated Rows
+
+* **Action:** Do not display rows for future dates (e.g., if today is **May 26, 2025**, there should be no entries for **May 27 or later**).
+* **Rationale:** Prevents confusion. Preparation logs should reflect current or past effort only.
+
+### 2. Sort by Most Recent First
+
+* **Action:** List preparation rows in **descending date order** (most recent first).
+* **Rationale:** This improves usability, as users typically update today’s log — not older ones.
+
+### 3. Email Notification for Missing Daily Entries
+
+* **Action:** Implement an **email notification system** that triggers once per day (e.g., 9 PM) if the user has not filled preparation logs for **that day**.
+
+#### Behavior Spec:
+
+* Check if the current date has an entry in the `preparation_logs` table.
+* If **any of the tracked categories** (e.g., Behavioral, Product Thinking, Analytical, Portfolio) are empty or missing:
+
+  * Trigger email to the user.
+
+#### Email Content Example:
+
+```
+Subject: Missing Preparation Entry for May 26
+
+Hi [User],
+
+We noticed you haven't filled in your preparation log for today, May 26. Here's what’s missing:
+
+- Behavioral: ❌
+- Product Thinking: ✅
+- Analytical: ❌
+- Product Portfolio: ❌
+
+Take 5 minutes to reflect and fill in your prep log to stay consistent.
+
+[Log Now] button
+
+You've got this!
+– Interview Prep Tracker
+```
+
+* **Bonus:** Allow users to configure notification time and enable/disable this reminder from the Settings page.
+
+---
+
+Let me know if you'd like this formalized into:
+
+* A development checklist
+* Updated PRD sections
+* UI component wireframes for improved layout
+
+I can also draft the daily notification email template or write the cron job logic if you're implementing this in Bolt, Replit, or Supabase.

@@ -297,15 +297,14 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   </div>
                 </th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">Resume Version</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[120px]">Mode</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">Follow-up</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[150px]">Mode</th>
                 <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[60px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {/* Add new row at the top */}
               <tr className="hover:bg-gradient-to-r hover:from-emerald-50 hover:to-blue-50 transition-all duration-300">
-                <td colSpan={9} className="px-6 py-4">
+                <td colSpan={8} className="px-6 py-4">
                   <Button
                     variant="ghost"
                     onClick={handleAddNew}
@@ -322,7 +321,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
               
               {applications.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center">
+                  <td colSpan={8} className="px-6 py-12 text-center">
                     <div className="text-slate-500">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Building className="h-8 w-8 text-slate-400" />
@@ -395,7 +394,9 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   <td className="px-4 py-3">
                     <NotionCell
                       type="select"
-                      value={application.applicationStage}
+                      value={application.applicationStage || 
+                        (application.jobStatus === "Applied" ? "In Review" : 
+                         application.jobStatus === "Rejected" ? "Rejected" : "")}
                       onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
                       options={APPLICATION_STAGES}
                       className="text-sm"
@@ -419,16 +420,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                       className="text-slate-600 text-sm"
                     />
                   </td>
-                  <td className="px-4 py-3">
-                    <NotionCell
-                      type="date"
-                      value={application.followUpDate || ""}
-                      onSave={(value) => handleCellUpdate(application.id, "followUpDate", value)}
-                      placeholder="Follow-up date"
-                      className="text-slate-600 text-sm"
-                      readOnly={shouldDisableFollowUp(application)}
-                    />
-                  </td>
+
                   <td className="px-4 py-3">
                     <div className="opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <Button

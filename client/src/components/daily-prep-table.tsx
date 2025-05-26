@@ -60,8 +60,11 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
     }
   });
 
-  // Generate 7 days from current week start
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+  // Generate days from current week start, but only up to today
+  const today = new Date();
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i))
+    .filter(day => day <= today) // Only show current and past dates
+    .reverse(); // Sort by most recent first
 
   // Group sessions by date and topic
   const sessionsByDate = sessions.reduce((acc, session) => {
