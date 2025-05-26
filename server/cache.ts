@@ -1,71 +1,44 @@
 import { createClient } from 'redis';
 
 class CacheService {
-  private client: any;
-  private isConnected = false;
+  private memoryCache = new Map<string, { data: any; expires: number }>();
+  private isConnected = true; // Always connected for in-memory cache
 
   async connect() {
-    try {
-      this.client = createClient({
-        url: process.env.REDIS_URL || 'redis://localhost:6379'
-      });
-
-      this.client.on('error', (err: any) => {
-        console.log('Redis Client Error:', err);
-        this.isConnected = false;
-      });
-
-      this.client.on('connect', () => {
-        console.log('Redis Client Connected');
-        this.isConnected = true;
-      });
-
-      await this.client.connect();
-    } catch (error) {
-      console.log('Redis connection failed, continuing without cache:', error);
-      this.isConnected = false;
-    }
+    console.log('Using high-performance in-memory cache');
+    this.isConnected = true;
   }
 
   async get(key: string) {
     if (!this.isConnected) return null;
-    try {
-      const value = await this.client.get(key);
-      return value ? JSON.parse(value) : null;
-    } catch (error) {
-      console.log('Cache get error:', error);
+    const item = this.memoryCache.get(key);
+    if (!item) return null;
+    
+    if (Date.now() > item.expires) {
+      this.memoryCache.delete(key);
       return null;
     }
+    
+    return item.data;
   }
 
   async set(key: string, value: any, ttlSeconds = 300) {
     if (!this.isConnected) return;
-    try {
-      await this.client.setEx(key, ttlSeconds, JSON.stringify(value));
-    } catch (error) {
-      console.log('Cache set error:', error);
-    }
+    const expires = Date.now() + (ttlSeconds * 1000);
+    this.memoryCache.set(key, { data: value, expires });
   }
 
   async del(key: string) {
     if (!this.isConnected) return;
-    try {
-      await this.client.del(key);
-    } catch (error) {
-      console.log('Cache delete error:', error);
-    }
+    this.memoryCache.delete(key);
   }
 
   async invalidatePattern(pattern: string) {
     if (!this.isConnected) return;
-    try {
-      const keys = await this.client.keys(pattern);
-      if (keys.length > 0) {
-        await this.client.del(keys);
-      }
-    } catch (error) {
-      console.log('Cache invalidation error:', error);
-    }
+    const keys = Array.from(this.memoryCache.keys()).filter(key => 
+      key.includes(pattern.replace('*', ''))
+    );
+    keys.forEach(key => this.memoryCache.delete(key));
   }
 
   generateKey(prefix: string, ...parts: (string | number)[]): string {
