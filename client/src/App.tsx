@@ -9,8 +9,11 @@ import Applications from "@/pages/applications";
 import Preparation from "@/pages/preparation";
 import Interviews from "@/pages/interviews";
 import Assessments from "@/pages/assessments";
+import AuthPage from "@/pages/auth-page";
 import Sidebar from "@/components/layout/sidebar";
 import ErrorBoundary from "@/components/error-boundary";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
@@ -20,11 +23,12 @@ function Router() {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <Switch>
-          <Route path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
-          <Route path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
-          <Route path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
-          <Route path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
-          <Route path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
+          <ProtectedRoute path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <ProtectedRoute path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
+          <ProtectedRoute path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
+          <ProtectedRoute path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
+          <ProtectedRoute path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
+          <Route path="/auth" component={AuthPage} />
           <Route component={NotFound} />
         </Switch>
       </div>
@@ -35,10 +39,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
