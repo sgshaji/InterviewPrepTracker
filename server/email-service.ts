@@ -45,6 +45,14 @@ interface PrepReminderData {
   template: string;
 }
 
+interface PrepCongratsData {
+  userName: string;
+  email: string;
+  date: string;
+  completedCategories: string[];
+  template: string;
+}
+
 export async function sendPrepReminder(data: PrepReminderData): Promise<boolean> {
   try {
     // Process the template with variables

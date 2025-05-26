@@ -17,9 +17,10 @@ export default function Preparation() {
   const [emailSettings, setEmailSettings] = useState({
     email: '',
     enableAlerts: false,
+    enableCongratulations: true,
     missedDaysThreshold: 2,
-    reminderTime: '21:00',
-    emailTemplate: `Subject: Missing Preparation Entry for {date}
+    reminderTimes: ['21:00'], // Support multiple reminder times
+    reminderTemplate: `Subject: Missing Preparation Entry for {date}
 
 Hi {userName},
 
@@ -30,6 +31,18 @@ We noticed you haven't filled in your preparation log for today, {date}. Here's 
 Take 5 minutes to reflect and fill in your prep log to stay consistent.
 
 You've got this!
+– Interview Prep Tracker`,
+    congratsTemplate: `Subject: Great job on your preparation today! 🎉
+
+Hi {userName},
+
+Congratulations! You've completed all your preparation categories for {date}:
+
+{completedCategories}
+
+Your consistency is paying off. Keep up the excellent work!
+
+You're building great habits!
 – Interview Prep Tracker`
   });
 
@@ -83,13 +96,22 @@ You've got this!
                     onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, enableAlerts: checked }))}
                   />
                 </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="enable-congrats">Send congratulations for completed prep</Label>
+                  <Switch
+                    id="enable-congrats"
+                    checked={emailSettings.enableCongratulations}
+                    onCheckedChange={(checked) => setEmailSettings(prev => ({ ...prev, enableCongratulations: checked }))}
+                  />
+                </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="threshold">Send alert after missing (days)</Label>
                   <Input
                     id="threshold"
                     type="number"
-                    min="1"
+                    min="0"
                     max="7"
                     value={emailSettings.missedDaysThreshold}
                     onChange={(e) => setEmailSettings(prev => ({ ...prev, missedDaysThreshold: parseInt(e.target.value) }))}
@@ -97,27 +119,77 @@ You've got this!
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="time">Daily reminder time</Label>
-                  <Input
-                    id="time"
-                    type="time"
-                    value={emailSettings.reminderTime}
-                    onChange={(e) => setEmailSettings(prev => ({ ...prev, reminderTime: e.target.value }))}
-                  />
+                  <Label>Daily reminder times</Label>
+                  <div className="space-y-2">
+                    {emailSettings.reminderTimes.map((time, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        <Input
+                          type="time"
+                          value={time}
+                          onChange={(e) => {
+                            const newTimes = [...emailSettings.reminderTimes];
+                            newTimes[index] = e.target.value;
+                            setEmailSettings(prev => ({ ...prev, reminderTimes: newTimes }));
+                          }}
+                        />
+                        {emailSettings.reminderTimes.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newTimes = emailSettings.reminderTimes.filter((_, i) => i !== index);
+                              setEmailSettings(prev => ({ ...prev, reminderTimes: newTimes }));
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEmailSettings(prev => ({ 
+                          ...prev, 
+                          reminderTimes: [...prev.reminderTimes, '09:00'] 
+                        }));
+                      }}
+                    >
+                      Add Another Time
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="template">Email Template</Label>
+                  <Label htmlFor="reminderTemplate">Reminder Email Template</Label>
                   <Textarea
-                    id="template"
-                    rows={8}
-                    value={emailSettings.emailTemplate}
-                    onChange={(e) => setEmailSettings(prev => ({ ...prev, emailTemplate: e.target.value }))}
+                    id="reminderTemplate"
+                    rows={6}
+                    value={emailSettings.reminderTemplate}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, reminderTemplate: e.target.value }))}
                     placeholder="Customize your reminder email..."
                     className="font-mono text-sm"
                   />
                   <div className="text-xs text-slate-500">
                     Available variables: {"{date}"}, {"{userName}"}, {"{missingCategories}"}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="congratsTemplate">Congratulations Email Template</Label>
+                  <Textarea
+                    id="congratsTemplate"
+                    rows={6}
+                    value={emailSettings.congratsTemplate}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, congratsTemplate: e.target.value }))}
+                    placeholder="Customize your congratulations email..."
+                    className="font-mono text-sm"
+                  />
+                  <div className="text-xs text-slate-500">
+                    Available variables: {"{date}"}, {"{userName}"}, {"{completedCategories}"}
                   </div>
                 </div>
                 
@@ -129,9 +201,10 @@ You've got this!
                       try {
                         const response = await apiRequest("/api/check-prep-reminders", "POST", {
                           email: emailSettings.email,
-                          template: emailSettings.emailTemplate
+                          template: emailSettings.reminderTemplate
                         });
-                        if (response.success) {
+                        const data = await response.json();
+                        if (data.success) {
                           alert('Test email sent successfully! Check your inbox.');
                         } else {
                           alert('Failed to send test email. Please check your email address.');
