@@ -1,10 +1,8 @@
-import { Resend } from 'resend';
+import fetch from 'node-fetch';
 
-if (!process.env.RESEND_API_KEY) {
-  throw new Error("RESEND_API_KEY environment variable must be set");
+if (!process.env.BREVO_API_KEY) {
+  throw new Error("BREVO_API_KEY environment variable must be set");
 }
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 interface EmailParams {
   to: string;
@@ -16,20 +14,38 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    const { data, error } = await resend.emails.send({
-      from: params.from,
-      to: [params.to],
-      subject: params.subject,
-      text: params.text || '',
-      html: params.html || params.text?.replace(/\n/g, '<br>') || '',
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY!,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: {
+          name: 'Interview Prep',
+          email: 'noreply@yourapp.com'
+        },
+        to: [
+          {
+            email: params.to,
+            name: 'User'
+          }
+        ],
+        subject: params.subject,
+        htmlContent: params.html || params.text?.replace(/\n/g, '<br>') || '',
+        textContent: params.text || ''
+      })
     });
 
-    if (error) {
-      console.error('Resend email error:', error);
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Brevo email error:', errorData);
       return false;
     }
 
-    console.log('✅ Email sent successfully via Resend:', data?.id);
+    const data = await response.json();
+    console.log('✅ Email sent successfully via Brevo:', data);
     return true;
   } catch (error) {
     console.error('Email service error:', error);
