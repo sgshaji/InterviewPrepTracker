@@ -377,15 +377,17 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                     <div className="flex items-center space-x-2">
                       <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
                       <div className="min-w-[80px]">
-                        <NotionCell
-                          type="date"
-                          value={application.dateApplied}
-                          onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
-                          className="font-medium text-sm"
-                          readOnly={isDateInPast(application.dateApplied)}
-                        />
-                        <div className="text-xs text-slate-500 mt-1">
+                        <div className="font-medium text-sm text-slate-800">
                           {formatDate(application.dateApplied)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          <NotionCell
+                            type="date"
+                            value={application.dateApplied}
+                            onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
+                            className="opacity-0 hover:opacity-100 transition-opacity duration-200"
+                            readOnly={isDateInPast(application.dateApplied)}
+                          />
                         </div>
                       </div>
                     </div>
@@ -427,32 +429,22 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center space-x-2">
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(application.jobStatus)}`}>
-                        {application.jobStatus}
-                      </div>
-                      <NotionCell
-                        type="select"
-                        value={application.jobStatus}
-                        onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
-                        options={JOB_STATUSES}
-                        className="text-sm opacity-0 hover:opacity-100 transition-opacity duration-200"
-                      />
-                    </div>
+                    <NotionCell
+                      type="select"
+                      value={application.jobStatus}
+                      onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
+                      options={JOB_STATUSES}
+                      className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusBadge(application.jobStatus)}`}
+                    />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center space-x-2">
-                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStageBadge(application.applicationStage || "In Review", application.jobStatus)}`}>
-                        {application.applicationStage || "In Review"}
-                      </div>
-                      <NotionCell
-                        type="select"
-                        value={application.applicationStage || "In Review"}
-                        onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
-                        options={APPLICATION_STAGES}
-                        className="text-sm opacity-0 hover:opacity-100 transition-opacity duration-200"
-                      />
-                    </div>
+                    <NotionCell
+                      type="select"
+                      value={application.applicationStage || "In Review"}
+                      onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
+                      options={APPLICATION_STAGES}
+                      className={`text-xs font-medium px-3 py-1 rounded-full ${getStageBadge(application.applicationStage || "In Review", application.jobStatus)}`}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <NotionCell
