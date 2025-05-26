@@ -37,10 +37,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const application = await storage.createApplication(validatedData);
       res.status(201).json(application);
     } catch (error) {
+      console.error("Error creating application:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid application data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create application" });
+        res.status(500).json({ message: "Failed to create application", error: error.message });
       }
     }
   });
