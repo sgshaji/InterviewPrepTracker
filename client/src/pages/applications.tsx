@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/layout/header";
 import ApplicationTable from "@/components/application-table";
+import VirtualizedApplicationTable from "@/components/virtualized-application-table";
+import { useDebouncedValue, useDebouncedCallback } from "@/hooks/use-debounced-value";
 import { Button } from "@/components/ui/button";
 import { Application } from "@shared/schema";
 

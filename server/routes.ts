@@ -9,6 +9,7 @@ import {
   insertReminderSchema 
 } from "@shared/schema";
 import { z } from "zod";
+import { validateDatabaseInput, asyncHandler, requestLogger } from "./middleware";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Mock user ID for demo purposes - in real app would come from authentication
