@@ -64,25 +64,38 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
-      "Applied": "bg-blue-100 text-blue-800",
-      "In Progress": "bg-amber-100 text-amber-800",
-      "Rejected": "bg-red-100 text-red-800",
-      "Offer": "bg-emerald-100 text-emerald-800"
+      "Applied": "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm",
+      "In Progress": "bg-amber-100 text-amber-700 border border-amber-200 shadow-sm animate-pulse",
+      "Rejected": "bg-red-100 text-red-700 border border-red-200 shadow-sm",
+      "Offer": "bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm ring-2 ring-emerald-200"
     };
-    return variants[status] || "bg-slate-100 text-slate-800";
+    return variants[status] || "bg-slate-100 text-slate-700 border border-slate-200";
   };
 
-  const getStageBadge = (stage: string) => {
-    const variants: Record<string, string> = {
-      "In Review": "bg-slate-100 text-slate-800",
-      "HR Round": "bg-blue-100 text-blue-800",
-      "HM Round": "bg-purple-100 text-purple-800",
-      "Case Study": "bg-orange-100 text-orange-800",
-      "Panel": "bg-indigo-100 text-indigo-800",
-      "Offer": "bg-emerald-100 text-emerald-800",
-      "Rejected": "bg-red-100 text-red-800"
+  const getStageBadge = (stage: string, status: string) => {
+    // If status is rejected, always use red regardless of stage
+    if (status === "Rejected") {
+      return "bg-red-100 text-red-700 border border-red-200";
+    }
+    
+    // If status is offer, always use green regardless of stage
+    if (status === "Offer") {
+      return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+    }
+    
+    // Progressive color coding based on interview stage advancement
+    const stageColors: Record<string, string> = {
+      "No Callback": "bg-gray-100 text-gray-600 border border-gray-200",
+      "In Review": "bg-blue-50 text-blue-600 border border-blue-200",
+      "HR Round": "bg-cyan-100 text-cyan-700 border border-cyan-200",
+      "Hiring Manager Round": "bg-purple-100 text-purple-700 border border-purple-200",
+      "Case Study/Assignment": "bg-orange-100 text-orange-700 border border-orange-200",
+      "Panel Interview": "bg-indigo-100 text-indigo-700 border border-indigo-200",
+      "Final Round": "bg-amber-100 text-amber-700 border border-amber-200",
+      "Offer": "bg-emerald-100 text-emerald-700 border border-emerald-200"
     };
-    return variants[stage] || "bg-slate-100 text-slate-800";
+    
+    return stageColors[stage] || "bg-slate-100 text-slate-700 border border-slate-200";
   };
 
   const handleCellUpdate = (id: number, field: keyof Application, value: string) => {
@@ -414,24 +427,32 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <NotionCell
-                      type="select"
-                      value={application.jobStatus}
-                      onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
-                      options={JOB_STATUSES}
-                      className="text-sm"
-                    />
+                    <div className="flex items-center space-x-2">
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(application.jobStatus)}`}>
+                        {application.jobStatus}
+                      </div>
+                      <NotionCell
+                        type="select"
+                        value={application.jobStatus}
+                        onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
+                        options={JOB_STATUSES}
+                        className="text-sm opacity-0 hover:opacity-100 transition-opacity duration-200"
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
-                    <NotionCell
-                      type="select"
-                      value={application.applicationStage || 
-                        (application.jobStatus === "Applied" ? "In Review" : 
-                         application.jobStatus === "Rejected" ? "Rejected" : "")}
-                      onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
-                      options={APPLICATION_STAGES}
-                      className="text-sm"
-                    />
+                    <div className="flex items-center space-x-2">
+                      <div className={`px-3 py-1 rounded-full text-xs font-medium ${getStageBadge(application.applicationStage || "In Review", application.jobStatus)}`}>
+                        {application.applicationStage || "In Review"}
+                      </div>
+                      <NotionCell
+                        type="select"
+                        value={application.applicationStage || "In Review"}
+                        onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
+                        options={APPLICATION_STAGES}
+                        className="text-sm opacity-0 hover:opacity-100 transition-opacity duration-200"
+                      />
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <NotionCell
