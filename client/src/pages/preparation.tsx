@@ -121,15 +121,38 @@ You've got this!
                   </div>
                 </div>
                 
-                <Button 
-                  className="w-full" 
-                  onClick={() => {
-                    console.log('Email settings saved:', emailSettings);
-                    setShowEmailConfig(false);
-                  }}
-                >
-                  Save Alert Settings
-                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline"
+                    className="flex-1" 
+                    onClick={async () => {
+                      try {
+                        const response = await apiRequest("/api/check-prep-reminders", "POST", {
+                          email: emailSettings.email,
+                          template: emailSettings.emailTemplate
+                        });
+                        if (response.success) {
+                          alert('Test email sent successfully! Check your inbox.');
+                        } else {
+                          alert('Failed to send test email. Please check your email address.');
+                        }
+                      } catch (error) {
+                        alert('Error sending test email. Please try again.');
+                      }
+                    }}
+                  >
+                    Send Test Email
+                  </Button>
+                  <Button 
+                    className="flex-1" 
+                    onClick={() => {
+                      console.log('Email settings saved:', emailSettings);
+                      setShowEmailConfig(false);
+                    }}
+                  >
+                    Save Settings
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>

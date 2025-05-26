@@ -305,7 +305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email notification endpoints
   app.post("/api/email-settings", async (req, res) => {
     try {
-      const { email, enableAlerts, missedDaysThreshold, reminderTime } = req.body;
+      const { email, enableAlerts, missedDaysThreshold, reminderTime, emailTemplate } = req.body;
       
       const settings = {
         userId: getCurrentUserId(),
@@ -313,14 +313,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enableAlerts,
         missedDaysThreshold,
         reminderTime,
+        emailTemplate,
         createdAt: new Date().toISOString()
       };
       
-      console.log('Email settings saved:', settings);
+      console.log('Email settings saved for user:', getCurrentUserId());
       res.json({ success: true, settings });
     } catch (error) {
       console.error("Error saving email settings:", error);
       res.status(500).json({ error: "Failed to save email settings" });
+    }
+  });
+
+  app.post("/api/check-prep-reminders", async (req, res) => {
+    try {
+      const { sendPrepReminder, checkMissedPreparation } = await import('./email-service');
+      
+      const userId = getCurrentUserId();
+      const sessions = await storage.getPreparationSessions(userId);
+      const user = await storage.getUser(userId);
+      
+      // Get today's date
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Default prep topics (in real app, these would be user-configurable)
+      const prepTopics = ["Behavioral", "Product Thinking", "Analytical Thinking", "Product Portfolio"];
+      
+      // Check for missing preparation
+      const missingCategories = checkMissedPreparation(sessions, prepTopics, today);
+      
+      if (missingCategories.length > 0) {
+        // In a real app, you'd get these from stored user settings
+        const defaultEmailSettings = {
+          email: req.body.email || 'user@example.com',
+          template: req.body.template || `Subject: Missing Preparation Entry for {date}
+
+Hi {userName},
+
+We noticed you haven't filled in your preparation log for today, {date}. Here's what's missing:
+
+{missingCategories}
+
+Take 5 minutes to reflect and fill in your prep log to stay consistent.
+
+You've got this!
+– Interview Prep Tracker`
+        };
+        
+        const success = await sendPrepReminder({
+          userName: user?.username || 'there',
+          email: defaultEmailSettings.email,
+          date: today,
+          missingCategories,
+          template: defaultEmailSettings.template
+        });
+        
+        res.json({ 
+          success, 
+          missingCategories, 
+          message: success ? 'Reminder email sent successfully' : 'Failed to send reminder email'
+        });
+      } else {
+        res.json({ 
+          success: true, 
+          missingCategories: [], 
+          message: 'All preparation categories completed for today' 
+        });
+      }
+    } catch (error) {
+      console.error("Error checking prep reminders:", error);
+      res.status(500).json({ error: "Failed to check prep reminders" });
     }
   });
 
