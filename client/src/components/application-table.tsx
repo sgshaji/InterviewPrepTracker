@@ -110,6 +110,121 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
     return application.jobStatus === "Rejected" || isDateInPast(application.followUpDate || "");
   };
 
+  // Function to get company logo from Clearbit API (reliable company logos)
+  const getCompanyLogo = (companyName: string) => {
+    if (!companyName) return null;
+    const domain = getCompanyDomain(companyName);
+    return `https://logo.clearbit.com/${domain}`;
+  };
+
+  // Helper to map company names to their domains
+  const getCompanyDomain = (companyName: string) => {
+    const domainMap: Record<string, string> = {
+      'Meta': 'meta.com',
+      'Microsoft': 'microsoft.com',
+      'Apple': 'apple.com',
+      'Google': 'google.com',
+      'Amazon': 'amazon.com',
+      'Netflix': 'netflix.com',
+      'Spotify': 'spotify.com',
+      'Adobe': 'adobe.com',
+      'Salesforce': 'salesforce.com',
+      'Oracle': 'oracle.com',
+      'Atlassian': 'atlassian.com',
+      'Uber': 'uber.com',
+      'PayPal': 'paypal.com',
+      'Paypal': 'paypal.com',
+      'LinkedIn': 'linkedin.com',
+      'Twitter': 'twitter.com',
+      'Slack': 'slack.com',
+      'Zoom': 'zoom.us',
+      'Dropbox': 'dropbox.com',
+      'Airbnb': 'airbnb.com',
+      'Tesla': 'tesla.com',
+      'JPMC': 'jpmorgan.com',
+      'Goldman Sachs': 'goldmansachs.com',
+      'Morgan Stanley': 'morganstanley.com',
+      'Bloomberg': 'bloomberg.com',
+      'Coinbase': 'coinbase.com',
+      'Stripe': 'stripe.com',
+      'Square': 'squareup.com',
+      'Robinhood': 'robinhood.com',
+      'Palantir': 'palantir.com',
+      'Snowflake': 'snowflake.com',
+      'Databricks': 'databricks.com',
+      'MongoDB': 'mongodb.com',
+      'Redis': 'redis.com',
+      'Elastic': 'elastic.co',
+      'Cloudflare': 'cloudflare.com',
+      'Twilio': 'twilio.com',
+      'SendGrid': 'sendgrid.com',
+      'Okta': 'okta.com',
+      'Auth0': 'auth0.com',
+      'Figma': 'figma.com',
+      'Notion': 'notion.so',
+      'Airtable': 'airtable.com',
+      'HubSpot': 'hubspot.com',
+      'Zendesk': 'zendesk.com',
+      'Intercom': 'intercom.com',
+      'Mailchimp': 'mailchimp.com',
+      'Canva': 'canva.com',
+      'Shopify': 'shopify.com',
+      'Squarespace': 'squarespace.com',
+      'Wix': 'wix.com',
+      'GitHub': 'github.com',
+      'GitLab': 'gitlab.com',
+      'Bitbucket': 'bitbucket.org',
+      'Docker': 'docker.com',
+      'Kubernetes': 'kubernetes.io',
+      'Jenkins': 'jenkins.io',
+      'CircleCI': 'circleci.com',
+      'Travis CI': 'travis-ci.org',
+      'Heroku': 'heroku.com',
+      'Vercel': 'vercel.com',
+      'Netlify': 'netlify.com',
+      'AWS': 'aws.amazon.com',
+      'GCP': 'cloud.google.com',
+      'Azure': 'azure.microsoft.com',
+      'DigitalOcean': 'digitalocean.com',
+      'Linode': 'linode.com',
+      'Vultr': 'vultr.com',
+      'JetBrains': 'jetbrains.com',
+      'IntelliJ': 'jetbrains.com',
+      'Wolt': 'wolt.com',
+      'Wise': 'wise.com',
+      'N26': 'n26.com',
+      'Bolt': 'bolt.eu',
+      'Trivago': 'trivago.com',
+      'Zalando': 'zalando.com',
+      'Deliveryhero': 'deliveryhero.com',
+      'DeliveryHero': 'deliveryhero.com',
+      'HelloFresh': 'hellofresh.com',
+      'Babbel': 'babbel.com',
+      'Taxfix': 'taxfix.com',
+      'Miro': 'miro.com',
+      'Confluence': 'atlassian.com',
+      'Intuit': 'intuit.com',
+      'Target': 'target.com',
+      'Walmart': 'walmart.com',
+      'Siemens': 'siemens.com',
+      'Arm': 'arm.com',
+      'Deel': 'deel.com',
+      'Datadog': 'datadoghq.com',
+      'NetApp': 'netapp.com',
+      'RedHat': 'redhat.com',
+      'Redhat': 'redhat.com',
+      'NewRelic': 'newrelic.com',
+      'Bluecore': 'bluecore.com',
+      'Instapro': 'instapro.group',
+      'Viator': 'viator.com',
+      'PayU': 'payu.com',
+      'Lloyds Bank': 'lloydsbank.com',
+      'Wayfair': 'wayfair.com'
+    };
+    
+    return domainMap[companyName] || `${companyName.toLowerCase().replace(/\s+/g, '')}.com`;
+  };
+
   if (isLoading) {
     return (
       <Card className="border-slate-200 shadow-sm">
@@ -138,43 +253,60 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
           <table className="w-full">
             <thead className="bg-gradient-to-r from-slate-100 to-slate-50 border-b-2 border-slate-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[130px]">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     <span>Date Applied</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[160px]">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[200px]">
                   <div className="flex items-center space-x-2">
                     <Building className="w-3 h-3 text-slate-500" />
                     <span>Company</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[180px]">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[200px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     <span>Role</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[140px]">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[120px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                     <span>Status</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[140px]">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[130px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                     <span>Stage</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[150px]">Resume Version</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[130px]">Mode</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[130px]">Follow-up</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[80px]"></th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">Resume Version</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[120px]">Mode</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">Follow-up</th>
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[60px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
+              {/* Add new row at the top */}
+              <tr className="hover:bg-gradient-to-r hover:from-emerald-50 hover:to-blue-50 transition-all duration-300">
+                <td colSpan={9} className="px-6 py-4">
+                  <Button
+                    variant="ghost"
+                    onClick={handleAddNew}
+                    disabled={createMutation.isPending}
+                    className="w-full h-10 text-slate-600 hover:text-slate-800 hover:bg-gradient-to-r hover:from-blue-50 hover:to-emerald-50 border-2 border-dashed border-slate-300 hover:border-blue-400 transition-all duration-300 rounded-xl group"
+                  >
+                    <Plus className="h-4 w-4 mr-3 group-hover:scale-110 transition-transform duration-200" />
+                    <span className="font-medium">
+                      {createMutation.isPending ? "Adding new application..." : "Add New Application"}
+                    </span>
+                  </Button>
+                </td>
+              </tr>
+              
               {applications.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center">
@@ -183,96 +315,109 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                         <Building className="h-8 w-8 text-slate-400" />
                       </div>
                       <h3 className="text-lg font-medium text-slate-900 mb-2">No applications yet</h3>
-                      <p>Click the + button below to add your first application.</p>
+                      <p>Click the + button above to add your first application.</p>
                     </div>
                   </td>
                 </tr>
               )}
               {applications.map((application, index) => (
                 <tr key={application.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group border-l-4 border-l-transparent hover:border-l-blue-400">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-3">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center space-x-2">
                       <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
                       <NotionCell
                         type="date"
                         value={application.dateApplied}
                         onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
-                        className="font-medium"
+                        className="font-medium text-sm"
                         readOnly={isDateInPast(application.dateApplied)}
                       />
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center shadow-sm">
-                        <Building className="text-slate-600 h-5 w-5" />
+                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm border border-slate-200 overflow-hidden">
+                        {application.companyName ? (
+                          <img
+                            src={getCompanyLogo(application.companyName) || ""}
+                            alt={`${application.companyName} logo`}
+                            className="w-6 h-6 object-contain"
+                            onError={(e) => {
+                              const target = e.currentTarget as HTMLImageElement;
+                              target.style.display = 'none';
+                              const fallback = target.nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <Building className="text-slate-500 h-4 w-4 hidden" />
                       </div>
                       <NotionCell
                         value={application.companyName}
                         onSave={(value) => handleCellUpdate(application.id, "companyName", value)}
                         placeholder="Company name"
-                        className="font-semibold text-slate-800"
+                        className="font-semibold text-slate-800 text-sm"
                       />
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <NotionCell
                       type="select"
                       value={application.roleTitle}
                       onSave={(value) => handleCellUpdate(application.id, "roleTitle", value)}
                       options={ROLE_TITLES}
                       placeholder="Role title"
-                      className="font-medium text-slate-700"
+                      className="font-medium text-slate-700 text-sm"
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center">
-                      <Badge className={`${getStatusBadge(application.jobStatus)} px-3 py-1 text-xs font-semibold rounded-full shadow-sm`}>
+                      <Badge className={`${getStatusBadge(application.jobStatus)} px-2 py-1 text-xs font-semibold rounded-full shadow-sm`}>
                         {application.jobStatus}
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center">
-                      <Badge className={`${getStageBadge(application.applicationStage)} px-3 py-1 text-xs font-semibold rounded-full shadow-sm`}>
+                      <Badge className={`${getStageBadge(application.applicationStage)} px-2 py-1 text-xs font-semibold rounded-full shadow-sm`}>
                         {application.applicationStage}
                       </Badge>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <NotionCell
                       value={application.resumeVersion || ""}
                       onSave={(value) => handleCellUpdate(application.id, "resumeVersion", value)}
                       placeholder="Resume version"
-                      className="text-slate-600"
+                      className="text-slate-600 text-sm"
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <NotionCell
                       type="select"
                       value={application.modeOfApplication || "Company Site"}
                       onSave={(value) => handleCellUpdate(application.id, "modeOfApplication", value)}
                       options={MODES_OF_APPLICATION}
                       placeholder="Select mode"
-                      className="text-slate-600"
+                      className="text-slate-600 text-sm"
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <NotionCell
                       type="date"
                       value={application.followUpDate || ""}
                       onSave={(value) => handleCellUpdate(application.id, "followUpDate", value)}
                       placeholder="Follow-up date"
-                      className="text-slate-600"
+                      className="text-slate-600 text-sm"
                       readOnly={shouldDisableFollowUp(application)}
                     />
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="opacity-0 group-hover:opacity-100 transition-all duration-300">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
                         onClick={() => deleteMutation.mutate(application.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -281,22 +426,6 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   </td>
                 </tr>
               ))}
-              {/* Add new row */}
-              <tr className="hover:bg-gradient-to-r hover:from-emerald-50 hover:to-blue-50 transition-all duration-300">
-                <td colSpan={9} className="px-6 py-6">
-                  <Button
-                    variant="ghost"
-                    onClick={handleAddNew}
-                    disabled={createMutation.isPending}
-                    className="w-full h-12 text-slate-600 hover:text-slate-800 hover:bg-gradient-to-r hover:from-blue-50 hover:to-emerald-50 border-2 border-dashed border-slate-300 hover:border-blue-400 transition-all duration-300 rounded-xl group"
-                  >
-                    <Plus className="h-5 w-5 mr-3 group-hover:scale-110 transition-transform duration-200" />
-                    <span className="font-medium">
-                      {createMutation.isPending ? "Adding new application..." : "Add New Application"}
-                    </span>
-                  </Button>
-                </td>
-              </tr>
             </tbody>
           </table>
         </div>
