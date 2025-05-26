@@ -337,6 +337,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test email endpoint
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ success: false, error: "Email is required" });
+      }
+
+      const { sendEmail } = await import('./email-service');
+      const success = await sendEmail({
+        to: email,
+        from: 'noreply@yourapp.com',
+        subject: '🧪 Test Email from Interview Prep Dashboard',
+        text: `Hello!\n\nThis is a test email from your Interview Preparation Dashboard.\n\nIf you're receiving this, your email notifications are working perfectly!\n\nBest regards,\nInterview Prep Team`,
+        html: `
+          <h2>🧪 Test Email Success!</h2>
+          <p>Hello!</p>
+          <p>This is a test email from your <strong>Interview Preparation Dashboard</strong>.</p>
+          <p>If you're receiving this, your email notifications are working perfectly!</p>
+          <br>
+          <p>Best regards,<br>
+          <strong>Interview Prep Team</strong></p>
+        `
+      });
+
+      res.json({ success });
+    } catch (error) {
+      console.error("Test email error:", error);
+      res.status(500).json({ success: false, error: "Failed to send email" });
+    }
+  });
+
   app.post("/api/check-prep-reminders", async (req, res) => {
     try {
       const { sendPrepReminder, checkMissedPreparation } = await import('./email-service');
