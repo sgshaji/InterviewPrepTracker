@@ -23,12 +23,12 @@ function Router() {
       </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <Switch>
-          <ProtectedRoute path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
-          <ProtectedRoute path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
-          <ProtectedRoute path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
-          <ProtectedRoute path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
-          <ProtectedRoute path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
-          <Route path="/auth" component={AuthPage} />
+          <Route path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <Route path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
+          <Route path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
+          <Route path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
+          <Route path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
+          {/* <Route path="/auth" component={AuthPage} /> */}
           <Route component={NotFound} />
         </Switch>
       </div>
@@ -39,12 +39,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+      {/* <AuthProvider> */}
         <TooltipProvider>
           <Router />
           <Toaster />
         </TooltipProvider>
-      </AuthProvider>
+      {/* </AuthProvider> */}
     </QueryClientProvider>
   );
 }

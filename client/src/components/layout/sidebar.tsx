@@ -15,7 +15,7 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const { user, logoutMutation } = useAuth();
+  // const { user, logoutMutation } = useAuth(); // Commented out for core testing
 
   return (
     <div className="w-64 bg-white border-r border-slate-200 flex flex-col">
@@ -61,10 +61,11 @@ export default function Sidebar() {
               <User className="text-blue-600 h-4 w-4" />
             </div>
             <div>
-              <div className="text-sm font-medium text-slate-900">{user?.username || 'User'}</div>
+              <div className="text-sm font-medium text-slate-900">Alex Johnson</div>
               <div className="text-xs text-slate-500">Job Seeker</div>
             </div>
           </div>
+          {/* Commented out auth functionality for core testing
           <Button
             variant="ghost"
             size="sm"
@@ -74,6 +75,7 @@ export default function Sidebar() {
           >
             <LogOut className="h-4 w-4" />
           </Button>
+          */}
         </div>
       </div>
     </div>
