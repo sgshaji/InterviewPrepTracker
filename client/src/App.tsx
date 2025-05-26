@@ -10,18 +10,21 @@ import Preparation from "@/pages/preparation";
 import Interviews from "@/pages/interviews";
 import Assessments from "@/pages/assessments";
 import Sidebar from "@/components/layout/sidebar";
+import ErrorBoundary from "@/components/error-boundary";
 
 function Router() {
   return (
     <div className="flex h-screen bg-slate-50">
-      <Sidebar />
+      <ErrorBoundary>
+        <Sidebar />
+      </ErrorBoundary>
       <div className="flex-1 flex flex-col overflow-hidden">
         <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/applications" component={Applications} />
-          <Route path="/preparation" component={Preparation} />
-          <Route path="/interviews" component={Interviews} />
-          <Route path="/assessments" component={Assessments} />
+          <Route path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
+          <Route path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
+          <Route path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
+          <Route path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
+          <Route path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
           <Route component={NotFound} />
         </Switch>
       </div>
