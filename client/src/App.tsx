@@ -18,23 +18,30 @@ import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
-    <div className="flex h-screen bg-slate-50">
-      <ErrorBoundary>
-        <Sidebar />
-      </ErrorBoundary>
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Switch>
-          <ProtectedRoute path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
-          <ProtectedRoute path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
-          <ProtectedRoute path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
-          <ProtectedRoute path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
-          <ProtectedRoute path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
-          <Route path="/login" component={LoginPage} />
-          <Route path="/register" component={RegisterPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </div>
-    </div>
+    <Switch>
+      {/* Auth pages without sidebar */}
+      <Route path="/login" component={LoginPage} />
+      <Route path="/register" component={RegisterPage} />
+      
+      {/* Main app with sidebar */}
+      <Route>
+        <div className="flex h-screen bg-slate-50">
+          <ErrorBoundary>
+            <Sidebar />
+          </ErrorBoundary>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Switch>
+              <ProtectedRoute path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
+              <ProtectedRoute path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
+              <ProtectedRoute path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
+              <ProtectedRoute path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
+              <ProtectedRoute path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
+              <Route component={NotFound} />
+            </Switch>
+          </div>
+        </div>
+      </Route>
+    </Switch>
   );
 }
 
