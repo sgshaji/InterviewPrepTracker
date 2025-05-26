@@ -5,9 +5,19 @@ import { apiRequest } from "@/lib/queryClient";
 import NotionCell from "./notion-cell";
 import StarRating from "./star-rating";
 import { PREPARATION_TOPICS } from "@/lib/constants";
+
+// Make preparation topics configurable
+const DEFAULT_PREP_TOPICS = ["Behavioral", "Product Thinking", "Analytical Thinking", "Product Portfolio"];
+
+interface PrepTopicsConfig {
+  topics: string[];
+}
 import { format, subDays, addDays } from "date-fns";
 import { Button } from "./ui/button";
-import { ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Settings, Plus, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 interface DailyPrepTableProps {
   sessions: PreparationSession[];
@@ -26,6 +36,9 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
     const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Make Monday start of week
     return addDays(today, mondayOffset);
   });
+  
+  const [prepTopics, setPrepTopics] = useState<string[]>(DEFAULT_PREP_TOPICS);
+  const [showTopicsConfig, setShowTopicsConfig] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -120,9 +133,9 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
           <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
             Today
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setShowTopicsConfig(true)}>
             <Settings className="h-4 w-4 mr-2" />
-            Email Alerts
+            Configure Topics
           </Button>
         </div>
       </div>
@@ -136,7 +149,7 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
                 <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[120px]">
                   Date
                 </th>
-                {PREPARATION_TOPICS.map(topic => (
+                {prepTopics.map(topic => (
                   <th key={topic} className="px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[200px]">
                     {topic}
                   </th>
@@ -163,7 +176,7 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
                         {isToday && ' (Today)'}
                       </div>
                     </td>
-                    {PREPARATION_TOPICS.map(topic => {
+                    {prepTopics.map(topic => {
                       const session = sessionsByDate[dateKey]?.[topic];
                       
                       return (
@@ -204,7 +217,7 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border p-4">
         <h3 className="font-semibold text-slate-700 mb-2">Weekly Progress</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          {PREPARATION_TOPICS.map(topic => {
+          {prepTopics.map(topic => {
             const weekSessions = weekDays
               .map(day => sessionsByDate[format(day, 'yyyy-MM-dd')]?.[topic])
               .filter(Boolean);
@@ -223,6 +236,56 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
           })}
         </div>
       </div>
+
+      {/* Topics Configuration Dialog */}
+      <Dialog open={showTopicsConfig} onOpenChange={setShowTopicsConfig}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configure Preparation Topics</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {prepTopics.map((topic, index) => (
+              <div key={index} className="flex items-center space-x-2">
+                <Input
+                  value={topic}
+                  onChange={(e) => {
+                    const newTopics = [...prepTopics];
+                    newTopics[index] = e.target.value;
+                    setPrepTopics(newTopics);
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const newTopics = prepTopics.filter((_, i) => i !== index);
+                    setPrepTopics(newTopics);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            
+            <Button
+              variant="outline"
+              onClick={() => setPrepTopics([...prepTopics, "New Topic"])}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Topic
+            </Button>
+            
+            <Button 
+              onClick={() => setShowTopicsConfig(false)}
+              className="w-full"
+            >
+              Save Configuration
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
