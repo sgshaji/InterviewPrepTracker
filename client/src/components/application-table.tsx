@@ -92,10 +92,23 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
   const handleAddNew = () => {
     createMutation.mutate({
       companyName: "",
-      roleTitle: "",
+      roleTitle: "Senior Product Manager",
       modeOfApplication: "Company Site"
     });
   };
+
+  // Sort applications: non-rejected first (by date desc), then rejected at bottom (by date desc)
+  const sortedApplications = [...applications].sort((a, b) => {
+    const aIsRejected = a.jobStatus === "Rejected";
+    const bIsRejected = b.jobStatus === "Rejected";
+    
+    // If one is rejected and other isn't, non-rejected comes first
+    if (aIsRejected && !bIsRejected) return 1;
+    if (!aIsRejected && bIsRejected) return -1;
+    
+    // Both are same status, sort by date descending (newest first)
+    return new Date(b.dateApplied).getTime() - new Date(a.dateApplied).getTime();
+  });
 
   // Helper functions to determine if a field should be readonly
   const isDateInPast = (dateString: string) => {
@@ -320,7 +333,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   </td>
                 </tr>
               )}
-              {applications.map((application, index) => (
+              {sortedApplications.map((application, index) => (
                 <tr key={application.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group border-l-4 border-l-transparent hover:border-l-blue-400">
                   <td className="px-4 py-3">
                     <div className="flex items-center space-x-2">
@@ -363,7 +376,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   <td className="px-4 py-3">
                     <NotionCell
                       type="select"
-                      value={application.roleTitle}
+                      value={application.roleTitle || "Senior Product Manager"}
                       onSave={(value) => handleCellUpdate(application.id, "roleTitle", value)}
                       options={ROLE_TITLES}
                       placeholder="Role title"
@@ -371,18 +384,22 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <Badge className={`${getStatusBadge(application.jobStatus)} px-2 py-1 text-xs font-semibold rounded-full shadow-sm`}>
-                        {application.jobStatus}
-                      </Badge>
-                    </div>
+                    <NotionCell
+                      type="select"
+                      value={application.jobStatus}
+                      onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
+                      options={JOB_STATUSES}
+                      className="text-sm"
+                    />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center">
-                      <Badge className={`${getStageBadge(application.applicationStage)} px-2 py-1 text-xs font-semibold rounded-full shadow-sm`}>
-                        {application.applicationStage}
-                      </Badge>
-                    </div>
+                    <NotionCell
+                      type="select"
+                      value={application.applicationStage}
+                      onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
+                      options={APPLICATION_STAGES}
+                      className="text-sm"
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <NotionCell

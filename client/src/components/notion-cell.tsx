@@ -18,21 +18,11 @@ const formatDisplayDate = (dateString: string) => {
   if (!dateString) return "";
   try {
     const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('en-US', { month: 'long' });
-    const year = date.getFullYear();
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.toLocaleDateString('en-US', { month: 'long' }).substring(0, 3);
+    const year = date.getFullYear().toString().slice(-2);
     
-    const getOrdinalSuffix = (day: number) => {
-      if (day > 3 && day < 21) return 'th';
-      switch (day % 10) {
-        case 1: return 'st';
-        case 2: return 'nd';
-        case 3: return 'rd';
-        default: return 'th';
-      }
-    };
-    
-    return `${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+    return `${day} ${month} ${year}`;
   } catch {
     return dateString;
   }
