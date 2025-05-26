@@ -1,0 +1,249 @@
+# 📘 Product Requirements Document (PRD)
+
+## 🎯 Product Name: Interview Preparation Dashboard
+
+A full-featured, self-updating web application designed to streamline and optimize the end-to-end job preparation process. It combines rich UI, deep automation, structured tracking, and actionable intelligence to help job seekers manage applications, track preparation, navigate interviews, and accelerate success with minimal friction.
+
+---
+
+## 🧭 Objective
+
+To serve as an intelligent, all-in-one platform for:
+
+* Managing job applications
+* Tracking interview stages
+* Preparing effectively across key skill areas
+* Reflecting on performance and learning from it
+* Acting on insights, reminders, and smart nudges
+
+---
+
+## 🔑 Key Modules Overview
+
+1. **Application Tracker**
+2. **Preparation Tracker**
+3. **Interview Tracker**
+4. **Post-Interview Self-Assessment (PoSIA)**
+5. **Daily/Weekly Dashboard**
+6. **Reminders & Notification System**
+7. **User Settings & Configuration**
+8. **Smart Suggestions Engine (Phase 2+)**
+
+---
+
+## 🧱 Application Tracker (Notion/Excel-style Table)
+
+### Purpose:
+
+Centralize job applications, monitor status, and trigger downstream tracking.
+
+### Features:
+
+* Notion-style table UI with inline row creation
+* Auto-filled `Date Applied`
+* Columns:
+
+  * `Date Applied` (auto)
+  * `Company Name`
+  * `Role Title`
+  * `Role URL`
+  * `Job Status` (Dropdown: Applied, In Progress, Rejected, Offer)
+  * `Application Stage` (Dropdown: In Review, HR Round, HM Round, Case Study, Panel, Offer, Rejected)
+  * `Resume Version`
+  * `Mode of Application` (LinkedIn, Site, Referral)
+  * `Follow-Up Date`
+
+### Automations:
+
+* Changing "Application Stage" to anything other than "In Review" → `Job Status = In Progress`
+* Stage = "Rejected" → `Job Status = Rejected`
+* Stage = "Offer" → `Job Status = Offer`
+* Follow-up reminders when date is overdue
+
+### Visual Features:
+
+* Color-coded stage/status
+* Timeline-style view by stage date
+* Sort & filter by outcome, recency, channel
+
+### 📐 Sample Wireframe:
+
+```
++--------------+--------------+-----------------+-------------------+-----------------+-------------------------+-------------------+
+| Date Applied | Company Name | Role Title      | Job Status        | Application Stage | Resume Version         | Follow-Up Date    |
++--------------+--------------+-----------------+-------------------+-----------------+-------------------------+-------------------+
+| 2024-05-26   | Stripe       | PM, Monetization| In Progress       | HR Round         | Resume v3 - Stripe     | 2024-05-28        |
+```
+
+---
+
+## 🧠 Preparation Tracker
+
+### Purpose:
+
+Track daily preparation across customizable topics, reinforce consistency, and reflect on learning.
+
+### Features:
+
+* Table-based daily logging (Notion style)
+* One row per day
+* Auto-filled `Date`
+* Customizable prep topics (default: Behavioral, Product Thinking, Analytical, Portfolio)
+* Each topic cell includes:
+
+  * Resource/Link (Notion, Loom, GDrive)
+  * Confidence Score (1–5 stars)
+  * Optional Notes/Insights
+
+### Visual Enhancements:
+
+* Two-line cells: top = activity link/text, bottom = confidence score
+* Editable topic list via settings
+* Weekly summary bar (time spent, confidence trend)
+
+### Automations:
+
+* Date auto-filled on new row
+* Weekly rollups of time, topic balance, confidence trend
+* Low-confidence topics flagged
+* Suggested “Next Focus Area”
+
+### 📐 Sample Wireframe:
+
+```
++------------+----------------------+-------------------------+--------------------------+-------------------------+
+| Date       | Behavioral           | Product Thinking        | Analytical Thinking      | Product Portfolio       |
++------------+----------------------+-------------------------+--------------------------+-------------------------+
+| 2024-05-26 | STAR doc ⭐⭐⭐⭐        | Loom URL ⭐⭐⭐            | SQL prep ⭐⭐              | None                    |
+```
+
+---
+
+## 📅 Interview Tracker
+
+### Purpose:
+
+Manage interviews across stages with linked prep tasks and insights.
+
+### Features:
+
+* Auto-created when Application Stage = HR/HM/Panel/Case/Offer
+* Columns:
+
+  * `Company`, `Role Title` (auto)
+  * `Interview Stage`
+  * `Interview Date`
+  * `Status` (Scheduled, Completed, Cancelled)
+  * `Prep Resources`
+  * `Assigned Tasks` (linked)
+  * `Feedback/Notes`
+  * `Interview Score` (1–5)
+
+### 📐 Sample Wireframe:
+
+```
++---------+-----------------+----------------+----------+-----------------+---------------------+------------------+
+| Company | Interview Stage | Interview Date | Status   | Prep Resources  | Assigned Tasks      | Interview Score  |
++---------+-----------------+----------------+----------+-----------------+---------------------+------------------+
+| Meta    | HM Round        | 2024-05-29     | Scheduled| JD, STAR notes  | 3 tasks linked      | N/A              |
+```
+
+---
+
+## 🧾 Post-Interview Self-Assessment (PoSIA)
+
+### Purpose:
+
+Encourage structured reflection after interviews.
+
+### Fields:
+
+* `Score` (1–5)
+* `Difficulty Level`
+* `What Went Well`
+* `What Fell Short`
+* `Questions Asked`
+* `Your Questions`
+* `Follow-Up Needed?`
+* `Time to Next Round`
+
+### Automation:
+
+* Trigger reminder if not filled within 24h of interview marked Completed
+* Auto-generate follow-up task if needed
+
+---
+
+## 📊 Dashboard (Command Center)
+
+### Key Widgets:
+
+* Today’s Snapshot: Interviews, tasks, follow-ups
+* Weekly Analytics: Time, confidence, streak
+* Application Funnel: Progress, rejections
+* Interview Insights: PoSIA scores, feedback
+* Smart Suggestions: Focus area, resume variant suggestions
+
+### 📐 Sample Layout:
+
+```
+[ Time Spent by Topic | Confidence Trend ]
+[ Interviews This Week | Tasks Due Today ]
+[ Application Funnel | Prep Consistency Streak ]
+```
+
+---
+
+## 🔔 Reminders & Notifications
+
+* Customizable time slots (6PM, 8PM, 10PM)
+* Reminders for prep, interviews, post-interview feedback
+* Custom templates per user
+
+---
+
+## ⚙️ Settings & Stack
+
+* Settings: Prep topics, resume versions, time goals, email templates
+* Stack:
+
+  * Frontend: React + TypeScript + TailwindCSS
+  * State: Zustand
+  * DB: Supabase (PostgreSQL, Auth, RLS)
+  * Charts: Recharts or Tremor
+  * Email: Resend/Postmark + cron jobs
+
+---
+
+## 🎨 UI/UX Tweaks
+
+### Inline Editing:
+
+* Hover over any cell → edit without opening a modal
+
+### Bulk Actions:
+
+* Select multiple applications → “Mark as Rejected” or update stage in one click
+
+### Keyboard Shortcuts:
+
+* `N` → New entry
+* `↑/↓` → Navigate rows
+* `Ctrl+S` → Save
+
+---
+
+## 🚀 Future Features (Phase 2+)
+
+* AI insights on interview performance trends
+* Resume version performance tracking
+* Suggested STAR stories from PoSIA logs
+* Dashboard chart widgets for stage conversion
+* Mock interview planner
+* Calendar sync (Google, Outlook)
+
+---
+
+## ✅ Summary
+
+This dashboard platform empowers serious job seekers to operate with structure, insight, and accountability. It connects prep, application effort, and reflection — building momentum and clarity throughout the entire interview journey.
