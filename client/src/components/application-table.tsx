@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -98,53 +98,56 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
     return stageColors[stage] || "bg-slate-100 text-slate-700 border border-slate-200";
   };
 
-  const handleCellUpdate = (id: number, field: keyof Application, value: string) => {
+  // Memoize expensive operations for better performance
+  const handleCellUpdate = useCallback((id: number, field: keyof Application, value: string) => {
     updateMutation.mutate({ id, data: { [field]: value } });
-  };
+  }, [updateMutation]);
 
-  // Format date as "DD MMM YY" (e.g., "26 May 25")
-  const formatDate = (dateString: string) => {
+  // Memoize date formatting
+  const formatDate = useCallback((dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     const day = date.getDate().toString().padStart(2, '0');
     const month = date.toLocaleDateString('en-US', { month: 'short' });
     const year = date.getFullYear().toString().slice(-2);
     return `${day} ${month} ${year}`;
-  };
+  }, []);
 
-  const handleAddNew = () => {
+  const handleAddNew = useCallback(() => {
     createMutation.mutate({
       companyName: "",
       roleTitle: "Senior Product Manager",
       modeOfApplication: "Company Site"
     });
-  };
+  }, [createMutation]);
 
-  // Sort applications: non-rejected first (by date desc), then rejected at bottom (by date desc)
-  const sortedApplications = [...applications].sort((a, b) => {
-    const aIsRejected = a.jobStatus === "Rejected";
-    const bIsRejected = b.jobStatus === "Rejected";
-    
-    // If one is rejected and other isn't, non-rejected comes first
-    if (aIsRejected && !bIsRejected) return 1;
-    if (!aIsRejected && bIsRejected) return -1;
-    
-    // Both are same status, sort by date descending (newest first)
-    return new Date(b.dateApplied).getTime() - new Date(a.dateApplied).getTime();
-  });
+  // Memoize sorted applications to prevent unnecessary re-sorting
+  const sortedApplications = useMemo(() => {
+    return [...applications].sort((a, b) => {
+      const aIsRejected = a.jobStatus === "Rejected";
+      const bIsRejected = b.jobStatus === "Rejected";
+      
+      // If one is rejected and other isn't, non-rejected comes first
+      if (aIsRejected && !bIsRejected) return 1;
+      if (!aIsRejected && bIsRejected) return -1;
+      
+      // Both are same status, sort by date descending (newest first)
+      return new Date(b.dateApplied).getTime() - new Date(a.dateApplied).getTime();
+    });
+  }, [applications]);
 
-  // Helper functions to determine if a field should be readonly
-  const isDateInPast = (dateString: string) => {
+  // Memoize helper functions for better performance
+  const isDateInPast = useCallback((dateString: string) => {
     if (!dateString) return false;
     const date = new Date(dateString);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return date < today;
-  };
+  }, []);
 
-  const shouldDisableFollowUp = (application: Application) => {
+  const shouldDisableFollowUp = useCallback((application: Application) => {
     return application.jobStatus === "Rejected" || isDateInPast(application.followUpDate || "");
-  };
+  }, [isDateInPast]);
 
   // Function to get company logo from Clearbit API (reliable company logos)
   const getCompanyLogo = (companyName: string) => {
@@ -155,7 +158,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
 
   // Helper to map company names to their domains
   const getCompanyDomain = (companyName: string) => {
-    const domainMap: Record<string, string> = {
+    const domainMap: { [key: string]: string } = {
       'Meta': 'meta.com',
       'Microsoft': 'microsoft.com',
       'Apple': 'apple.com',
@@ -163,99 +166,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
       'Amazon': 'amazon.com',
       'Netflix': 'netflix.com',
       'Spotify': 'spotify.com',
-      'Adobe': 'adobe.com',
-      'Salesforce': 'salesforce.com',
-      'Oracle': 'oracle.com',
-      'Atlassian': 'atlassian.com',
-      'Uber': 'uber.com',
-      'PayPal': 'paypal.com',
-      'Paypal': 'paypal.com',
-      'LinkedIn': 'linkedin.com',
-      'Twitter': 'twitter.com',
-      'Slack': 'slack.com',
-      'Zoom': 'zoom.us',
-      'Dropbox': 'dropbox.com',
-      'Airbnb': 'airbnb.com',
-      'Tesla': 'tesla.com',
-      'JPMC': 'jpmorgan.com',
-      'Goldman Sachs': 'goldmansachs.com',
-      'Morgan Stanley': 'morganstanley.com',
-      'Bloomberg': 'bloomberg.com',
-      'Coinbase': 'coinbase.com',
-      'Stripe': 'stripe.com',
-      'Square': 'squareup.com',
-      'Robinhood': 'robinhood.com',
-      'Palantir': 'palantir.com',
-      'Snowflake': 'snowflake.com',
-      'Databricks': 'databricks.com',
-      'MongoDB': 'mongodb.com',
-      'Redis': 'redis.com',
-      'Elastic': 'elastic.co',
-      'Cloudflare': 'cloudflare.com',
-      'Twilio': 'twilio.com',
-      'SendGrid': 'sendgrid.com',
-      'Okta': 'okta.com',
-      'Auth0': 'auth0.com',
-      'Figma': 'figma.com',
-      'Notion': 'notion.so',
-      'Airtable': 'airtable.com',
-      'HubSpot': 'hubspot.com',
-      'Zendesk': 'zendesk.com',
-      'Intercom': 'intercom.com',
-      'Mailchimp': 'mailchimp.com',
-      'Canva': 'canva.com',
-      'Shopify': 'shopify.com',
-      'Squarespace': 'squarespace.com',
-      'Wix': 'wix.com',
-      'GitHub': 'github.com',
-      'GitLab': 'gitlab.com',
-      'Bitbucket': 'bitbucket.org',
-      'Docker': 'docker.com',
-      'Kubernetes': 'kubernetes.io',
-      'Jenkins': 'jenkins.io',
-      'CircleCI': 'circleci.com',
-      'Travis CI': 'travis-ci.org',
-      'Heroku': 'heroku.com',
-      'Vercel': 'vercel.com',
-      'Netlify': 'netlify.com',
-      'AWS': 'aws.amazon.com',
-      'GCP': 'cloud.google.com',
-      'Azure': 'azure.microsoft.com',
-      'DigitalOcean': 'digitalocean.com',
-      'Linode': 'linode.com',
-      'Vultr': 'vultr.com',
-      'JetBrains': 'jetbrains.com',
-      'IntelliJ': 'jetbrains.com',
-      'Wolt': 'wolt.com',
-      'Wise': 'wise.com',
-      'N26': 'n26.com',
-      'Bolt': 'bolt.eu',
-      'Trivago': 'trivago.com',
-      'Zalando': 'zalando.com',
-      'Deliveryhero': 'deliveryhero.com',
-      'DeliveryHero': 'deliveryhero.com',
-      'HelloFresh': 'hellofresh.com',
-      'Babbel': 'babbel.com',
-      'Taxfix': 'taxfix.com',
-      'Miro': 'miro.com',
-      'Confluence': 'atlassian.com',
-      'Intuit': 'intuit.com',
-      'Target': 'target.com',
-      'Walmart': 'walmart.com',
-      'Siemens': 'siemens.com',
-      'Arm': 'arm.com',
-      'Deel': 'deel.com',
-      'Datadog': 'datadoghq.com',
-      'NetApp': 'netapp.com',
-      'RedHat': 'redhat.com',
-      'Redhat': 'redhat.com',
-      'NewRelic': 'newrelic.com',
-      'Bluecore': 'bluecore.com',
-      'Instapro': 'instapro.group',
-      'Viator': 'viator.com',
-      'PayU': 'payu.com',
-      'Lloyds Bank': 'lloydsbank.com',
-      'Wayfair': 'wayfair.com'
+      'Adobe': 'adobe.com'
     };
     
     return domainMap[companyName] || `${companyName.toLowerCase().replace(/\s+/g, '')}.com`;
