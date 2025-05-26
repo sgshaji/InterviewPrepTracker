@@ -10,7 +10,33 @@ interface NotionCellProps {
   className?: string;
   type?: "text" | "date" | "select";
   options?: readonly string[];
+  readOnly?: boolean;
 }
+
+// Helper function to format dates beautifully
+const formatDisplayDate = (dateString: string) => {
+  if (!dateString) return "";
+  try {
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.toLocaleDateString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    
+    const getOrdinalSuffix = (day: number) => {
+      if (day > 3 && day < 21) return 'th';
+      switch (day % 10) {
+        case 1: return 'st';
+        case 2: return 'nd';
+        case 3: return 'rd';
+        default: return 'th';
+      }
+    };
+    
+    return `${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+  } catch {
+    return dateString;
+  }
+};
 
 export default function NotionCell({ 
   value, 
@@ -18,7 +44,8 @@ export default function NotionCell({
   placeholder = "Empty", 
   className,
   type = "text",
-  options = []
+  options = [],
+  readOnly = false
 }: NotionCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -36,7 +63,7 @@ export default function NotionCell({
   }, [value]);
 
   const handleClick = () => {
-    if (!isEditing && type !== "select") {
+    if (!readOnly && !isEditing && type !== "select") {
       setIsEditing(true);
       setEditValue(value);
     }
@@ -72,8 +99,11 @@ export default function NotionCell({
 
   if (type === "select") {
     return (
-      <Select value={value} onValueChange={onSave}>
-        <SelectTrigger className="h-8 border-0 bg-transparent hover:bg-slate-50 focus:bg-white focus:border-slate-200">
+      <Select value={value} onValueChange={readOnly ? undefined : onSave} disabled={readOnly}>
+        <SelectTrigger className={cn(
+          "h-8 border-0 bg-transparent hover:bg-slate-50 focus:bg-white focus:border-slate-200",
+          readOnly && "opacity-60 cursor-not-allowed"
+        )}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -101,16 +131,19 @@ export default function NotionCell({
     );
   }
 
+  const displayValue = type === "date" ? formatDisplayDate(value) : value;
+
   return (
     <div
       className={cn(
-        "h-8 px-3 py-1 cursor-text hover:bg-slate-50 rounded-sm transition-colors flex items-center text-sm",
+        "h-8 px-3 py-1 rounded-sm transition-colors flex items-center text-sm",
+        readOnly ? "cursor-default opacity-70" : "cursor-text hover:bg-slate-50",
         !value && "text-slate-400",
         className
       )}
       onClick={handleClick}
     >
-      {value || placeholder}
+      {displayValue || placeholder}
     </div>
   );
 }

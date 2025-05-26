@@ -93,7 +93,21 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
     createMutation.mutate({
       companyName: "",
       roleTitle: "",
+      modeOfApplication: "Company Site"
     });
+  };
+
+  // Helper functions to determine if a field should be readonly
+  const isDateInPast = (dateString: string) => {
+    if (!dateString) return false;
+    const date = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+  };
+
+  const shouldDisableFollowUp = (application: Application) => {
+    return application.jobStatus === "Rejected" || isDateInPast(application.followUpDate || "");
   };
 
   if (isLoading) {
@@ -184,6 +198,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                         value={application.dateApplied}
                         onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
                         className="font-medium"
+                        readOnly={isDateInPast(application.dateApplied)}
                       />
                     </div>
                   </td>

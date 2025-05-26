@@ -18,7 +18,6 @@ export const APPLICATION_STAGES = [
 export const ROLE_TITLES = [
   "Product Manager",
   "Senior Product Manager",
-  "Sr PM", 
   "Principal Product Manager",
   "Staff Product Manager",
   "Product Owner",
