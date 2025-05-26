@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { errorHandler, requestLogger } from "./middleware";
 import { startNotificationScheduler } from "./notification-scheduler";
+import { cache } from "./cache";
 
 const app = express();
 app.use(express.json());
@@ -40,6 +41,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize Redis cache
+  await cache.connect();
+  
   const server = await registerRoutes(app);
 
   app.use(errorHandler);

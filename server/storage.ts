@@ -94,11 +94,24 @@ export class DatabaseStorage implements IStorage {
 
   // Applications
   async getApplications(userId: number): Promise<Application[]> {
-    return await db
+    const cacheKey = cache.generateKey('applications', userId);
+    
+    // Try to get from cache first
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // If not in cache, fetch from database
+    const result = await db
       .select()
       .from(applications)
       .where(eq(applications.userId, userId))
       .orderBy(desc(applications.dateApplied));
+    
+    // Cache for 5 minutes
+    await cache.set(cacheKey, result, 300);
+    return result;
   }
 
   async getApplication(id: number): Promise<Application | undefined> {
@@ -114,6 +127,11 @@ export class DatabaseStorage implements IStorage {
       .insert(applications)
       .values(application)
       .returning();
+    
+    // Invalidate user's applications cache
+    await cache.del(cache.generateKey('applications', application.userId));
+    await cache.del(cache.generateKey('dashboard:stats', application.userId));
+    
     return newApplication;
   }
 
