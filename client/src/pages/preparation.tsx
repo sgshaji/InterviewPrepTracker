@@ -226,9 +226,15 @@ You're building great habits!
                     className="flex-1" 
                     onClick={async () => {
                       try {
-                        const response = await apiRequest("/api/check-prep-reminders", "POST", {
-                          email: emailSettings.email,
-                          template: emailSettings.reminderTemplate
+                        const response = await fetch("/api/check-prep-reminders", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            email: emailSettings.email,
+                            template: emailSettings.reminderTemplate
+                          })
                         });
                         const data = await response.json();
                         if (data.success) {
