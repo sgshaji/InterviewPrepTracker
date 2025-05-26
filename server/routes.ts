@@ -305,23 +305,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Email notification endpoints
   app.post("/api/email-settings", async (req, res) => {
     try {
-      const { email, enableAlerts, missedDaysThreshold, reminderTime, emailTemplate } = req.body;
+      const { 
+        email, 
+        enableDailyReminders, 
+        enableCongratulations, 
+        reminderTimes, 
+        reminderTemplate, 
+        congratsTemplate 
+      } = req.body;
       
       const settings = {
         userId: getCurrentUserId(),
         email,
-        enableAlerts,
-        missedDaysThreshold,
-        reminderTime,
-        emailTemplate,
+        enableDailyReminders,
+        enableCongratulations,
+        reminderTimes,
+        reminderTemplate,
+        congratsTemplate,
         createdAt: new Date().toISOString()
       };
       
-      console.log('Email settings saved for user:', getCurrentUserId());
+      // Save to notification scheduler
+      const { saveEmailSettings } = await import('./notification-scheduler');
+      saveEmailSettings(getCurrentUserId(), req.body);
+      
+      console.log('✅ Email settings saved for user:', getCurrentUserId());
       res.json({ success: true, settings });
     } catch (error) {
       console.error("Error saving email settings:", error);
-      res.status(500).json({ error: "Failed to save email settings" });
+      res.status(500).json({ success: false, error: "Failed to save email settings" });
     }
   });
 
