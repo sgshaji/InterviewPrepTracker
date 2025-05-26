@@ -89,6 +89,16 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
     updateMutation.mutate({ id, data: { [field]: value } });
   };
 
+  // Format date as "DD MMM YY" (e.g., "26 May 25")
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day} ${month} ${year}`;
+  };
+
   const handleAddNew = () => {
     createMutation.mutate({
       companyName: "",
@@ -266,39 +276,49 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
           <table className="w-full">
             <thead className="bg-gradient-to-r from-slate-100 to-slate-50 border-b-2 border-slate-200">
               <tr>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[100px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Date Applied</span>
+                    <span>Date</span>
                   </div>
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[200px]">
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[160px]">
                   <div className="flex items-center space-x-2">
                     <Building className="w-3 h-3 text-slate-500" />
                     <span>Company</span>
                   </div>
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[200px]">
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[140px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                     <span>Role</span>
                   </div>
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[120px]">
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[100px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
                     <span>Status</span>
                   </div>
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[130px]">
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[120px]">
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                     <span>Stage</span>
                   </div>
                 </th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[140px]">Resume Version</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[150px]">Mode</th>
-                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[60px]"></th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[100px]">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
+                    <span>Resume</span>
+                  </div>
+                </th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[110px]">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                    <span>Applied Via</span>
+                  </div>
+                </th>
+                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[50px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
@@ -332,18 +352,29 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   </td>
                 </tr>
               )}
-              {sortedApplications.map((application, index) => (
-                <tr key={application.id} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-300 group border-l-4 border-l-transparent hover:border-l-blue-400">
-                  <td className="px-4 py-3">
+              {sortedApplications.map((application, index) => {
+                const isRejected = application.jobStatus === "Rejected";
+                return (
+                <tr key={application.id} className={`transition-all duration-300 group border-l-4 ${
+                  isRejected 
+                    ? "bg-red-50/50 hover:bg-red-50 border-l-red-300 opacity-75" 
+                    : "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-l-transparent hover:border-l-blue-400"
+                }`}>
+                  <td className="px-3 py-4">
                     <div className="flex items-center space-x-2">
                       <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
-                      <NotionCell
-                        type="date"
-                        value={application.dateApplied}
-                        onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
-                        className="font-medium text-sm"
-                        readOnly={isDateInPast(application.dateApplied)}
-                      />
+                      <div className="min-w-[80px]">
+                        <NotionCell
+                          type="date"
+                          value={application.dateApplied}
+                          onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
+                          className="font-medium text-sm"
+                          readOnly={isDateInPast(application.dateApplied)}
+                        />
+                        <div className="text-xs text-slate-500 mt-1">
+                          {formatDate(application.dateApplied)}
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -434,8 +465,8 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                     </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
+                );
+              })}
           </table>
         </div>
       </Card>
