@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest } from "@/lib/queryClient";
 import Header from "@/components/layout/header";
 import DailyPrepTable from "@/components/daily-prep-table";
@@ -44,6 +44,19 @@ Your consistency is paying off. Keep up the excellent work!
 You're building great habits!
 – Interview Prep Tracker`
   });
+
+  // Load saved email settings on component mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('emailSettings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setEmailSettings(parsed);
+      } catch (error) {
+        console.error('Error loading saved email settings:', error);
+      }
+    }
+  }, []);
 
   const { data: sessions, isLoading } = useQuery<PreparationSession[]>({
     queryKey: ["/api/preparation-sessions"],
@@ -251,12 +264,37 @@ You're building great habits!
                   </Button>
                   <Button 
                     className="flex-1" 
-                    onClick={() => {
-                      console.log('Email settings saved:', emailSettings);
-                      setShowEmailConfig(false);
+                    onClick={async () => {
+                      if (!emailSettings.email) {
+                        alert('Please enter your email address first.');
+                        return;
+                      }
+                      
+                      try {
+                        // Save settings to the server
+                        const response = await fetch("/api/email-settings", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify(emailSettings)
+                        });
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                          // Also save to localStorage as backup
+                          localStorage.setItem('emailSettings', JSON.stringify(emailSettings));
+                          alert('✅ Configuration saved! Daily notifications are now active.');
+                          setShowEmailConfig(false);
+                        } else {
+                          alert('❌ Failed to save settings. Please try again.');
+                        }
+                      } catch (error) {
+                        alert('❌ Error saving settings. Please try again.');
+                      }
                     }}
                   >
-                    Save Settings
+                    💾 Save Settings
                   </Button>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import fetch from 'node-fetch';
+// Using built-in fetch (Node.js 18+)
 
 if (!process.env.BREVO_API_KEY) {
   throw new Error("BREVO_API_KEY environment variable must be set");
