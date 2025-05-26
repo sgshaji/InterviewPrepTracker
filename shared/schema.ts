@@ -6,9 +6,14 @@ import { relations } from "drizzle-orm";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
   role: text("role"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  subscriptionStatus: text("subscription_status").notNull().default("inactive"), // inactive, active, canceled
+  stripeCustomerId: text("stripe_customer_id"),
+  subscriptionId: text("subscription_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -118,6 +123,12 @@ export const remindersRelations = relations(reminders, ({ one }) => ({
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  isAdmin: true,
+  stripeCustomerId: true,
+  subscriptionId: true,
+}).extend({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export const insertApplicationSchema = createInsertSchema(applications).omit({
