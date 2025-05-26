@@ -1,0 +1,110 @@
+No. (Start at 1)	How Did You Apply?	Company	Position	Date Applied	Role Status 	Stage	Link	Location	Resume	Follow Up
+1	Online Application	Wolt	Product Lead	01/08/25	No Longer Recruiting	2 - Applied	https://www.linkedin.com/jobs/view/4117600916/?refId=cc7b1835-2964-4205-9244-ffd7c55c48ee&trackingId=fgdNBgMrRomsPNlOWXWP5A%3D%3D	 Helsnki		
+2	Online Application	NewRelic	Sr PM	01/08/25	Rejected	2 - Applied	https://job-boards.greenhouse.io/newrelic/jobs/4481282008?gh_jid=4481282008&gh_src=f006f1208us	Hyderabad		
+3	Online Application	Cloudera	Sr PM	01/08/25	Rejected	2 - Applied	https://cloudera.wd5.myworkdayjobs.com/External_Career/job/Hungary--Budapest/Sr-Product-Manager_250005-1?source=APPLICANT_SOURCE-3-187%2520%253B%2520APPLICANT_SOURCE-3-187	Hungary		
+4	Online Application	TaylorWessing	AI PM	01/08/25	Rejected	2 - Applied	https://careers.taylorwessing.com/Careeropportunities/job/London-AI-Product-Manager/1142765555/?%26external_source=LinkedIn&external_source=LinkedIn	London		
+5	Online Application	Primark	Platform PM	01/08/25	Rejected	2 - Applied	https://careers.primark.com/en/job/reading/platform-product-manager-data-and-analytics/8171/74767322416	London		
+6	Online Application	Arm	Platform PM - AI/ML	09/01/25	Rejected	2 - Applied	https://experienced-arm.icims.com/jobs/13298/platform-product-manager---ai-ml/job?mode=submit_apply	London		
+7	Personal Referral	Walmart	Staff PM	01/09/25	Rejected	2 - Applied	https://walmart.wd5.myworkdayjobs.com/en-US/WalmartExternal/job/XMLNAME--IND--STAFF--PRODUCT-MANAGER_R-2049169	Bengaluru	B2C	
+8	Online Application	Paypal	Sr PM	01/09/25	Rejected	2 - Applied	https://paypal.eightfold.ai/careerhub/explore/jobs/274904227944	Bengaluru	Platform	
+9	Online Application	Tealium	Sr PM	01/12/25	Rejected	2 - Applied	https://tealium.wd1.myworkdayjobs.com/Careers/job/Remote-United-Kingdom/Sr-Product-Manager--API-Platform--Remote-_-1?source=LinkedIn	London	Platform Engineering	
+10	Online Application	OakNorth	Technical PM	01/12/25	Rejected	2 - Applied	https://oaknorth.co.uk/jobs/apply/?id=a610248e-a931-4dca-8c03-1b95047ae61d	London	Platform Engineering	
+11	Online Application	Expedia	Sr PM	01/12/25	Rejected	2 - Applied	https://careers.expediagroup.com/jobs/job/?Senior+Product+Manager-London--j-R-93013-1	London	AI/ML	
+12	Personal Referral	Oracle	Principal PM	01/15/25	Rejected	2 - Applied	https://www.linkedin.com/jobs/view/4123893809/?eBP=BUDGET_EXHAUSTED_JOB&refId=dnPLKWuuiglOgpYC3Amg7Q%3D%3D&trackingId=8sRMFqy4koUTImjwEEn0yg%3D%3D&trk=flagship3_search_srp_jobs	Bengaluru	B2B	
+13	Personal Referral	Adobe	Sr PM	01/15/25	Active	2 - Applied	https://careers.adobe.com/us/en/job/ADOBUSR152701EXTERNALENUS/Senior-Product-Manager?utm_medium=phenom-feeds&source=LinkedIn&utm_source=linkedin	Bengaluru	B2B	
+14	Online Application	Epicor	PM	01/15/25	Rejected	2 - Applied	https://epicorsoftware.wd5.myworkdayjobs.com/epicorjobs/job/India-Bangalore/Product-Manager--Cloud-Engineering-_JR100620?source=LinkedIn	Bengaluru	Platform Engineering	
+15	Online Application	Atlassian	Principal PM	01/15/25	Rejected	2 - Applied	https://careers-apac-atlassian.icims.com/jobs/17427/principal-product-manager---jira-issue-experience/job?iis=LinkedIn&iisn=LinkedIn_Job_Ad&mobile=false&width=1202&height=500&bga=true&needsRedirect=false&jan1offset=0&jun1offset=60	Bengaluru	B2B	
+16	Personal Referral	Walmart	Staff PM	01/15/25	Rejected	2 - Applied	https://www.linkedin.com/jobs/view/4123151688/?eBP=NON_CHARGEABLE_CHANNEL&refId=7Zym2z0bAltQJBEQeNyPgw%3D%3D&trackingId=UQ58D%2FQ%2B3rIPM%2BqUlL%2Ba%2Bw%3D%3D&trk=flagship3_search_srp_jobs	Bengaluru	B2C	
+17	Personal Referral	Elastic	Sr PM	01/16/25	Rejected	2 - Applied	https://jobs.elastic.co/jobs/engineering/united-states/kibana-alerting-senior-product-manager/6271389?gh_jid=6271389&gh_src=ubgar5dh1#/	London	Platform Engineering	
+18	Online Application	Dynatrace	Principal PM	01/17/25	Rejected	2 - Applied		Barcelona	Platform Engineering	
+19	Online Application	Stackoverflow	Sr PM	01/18/25	Rejected	2 - Applied	https://stackoverflow.co/company/work-here/6542306/?gh_jid=6542306&utm_source=Otta#apply	Remote	AI/ML Custom	
+20	Online Application	Adobe	Sr PM	01/18/25	Rejected	2 - Applied	https://careers.adobe.com/us/en/job/R152701/Senior-Product-Manager	Bengaluru	AI/ML Custom	
+21	Online Application	Paypal	Lead PM	01/20/25	Rejected	2 - Applied	https://paypal.eightfold.ai/careerhub/explore/jobs/274904698571	Bengaluru	Custom - Lead PM	
+22	Online Application	Freetrade	Senior PM	01/20/25	Rejected	2 - Applied	https://freetrade.pinpointhq.com/postings/e20b6224-5a70-4ca2-a92e-6475d1010356	London	B2B	
+23	Personal Referral	JPMC	PM	01/20/25	Rejected	2 - Applied	https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/my-profile/preview/210581833	London		
+24	Online Application	Paypal	Senior PM	01/23/25	Rejected	2 - Applied	https://paypal.eightfold.ai/careers?query=R0121193&pid=274904581020&domain=paypal.com&sort_by=relevance&show_multiple=false#apply	Bengaluru	Platform	
+25	Online Application	Zalando	Senior PM	01/24/25	Rejected	2 - Applied	https://jobs.zalando.com/en/jobs/2718289?gh_src=2104be071	Berlin	B2B	
+26	Online Application	Preply	Senior PM	01/24/25	Rejected	2 - Applied	https://preply.com/en/careers/apply?gh_jid=6335972003#apply	Barcelona	B2C	
+27	Personal Referral	Microsoft	Senior PM	01/24/25	Rejected	2 - Applied	https://jobs.careers.microsoft.com/global/en/job/1789266	Barcelona	Custom	
+28	Online Application	Bloomberg	PM	01/24/25	Rejected	2 - Applied	https://bloomberg.avature.net/careers/JobDetail/Product-Manager-Knowledge-Graph-Group/9759	London	Custom	
+29	Online Application	Dremio	Senior PM	01/28/25	Rejected	2 - Applied	https://www.dremio.com/careers/job-postings/?gh_jid=6335578003&gh_src=2add02f73us	London	Cloud Infra	
+30	Online Application	Tripadvisor	Senior PM	01/28/25	Rejected	2 - Applied	https://careers.tripadvisor.com/job?jobId=6575422&t=0uxfm5&gh_src=0uxfm5	London	Custom	
+31	Online Application	Medallia	Senior PM	01/28/25	Rejected	3 - Recruiter Screen	https://globalcareers-medallia.icims.com/jobs/5662/senior-product-manager%2c-data-%26-ai-platform/job?mode=submit_apply	Remote	Platform	
+32	Personal Referral	Playolocity	Senior PM	01/28/25	Rejected	2 - Applied	https://globalcareers-medallia.icims.com/jobs/5662/senior-product-manager%2c-data-%26-ai-platform/job?mode=submit_apply	Remote	B2B	
+33	Online Application	DeliveryHero	Senior PM	01/28/25	Rejected	7 - Final Round	https://careers.deliveryhero.com/job/senior-data-product-manager-vendor-management-in-berlin-germany-jid-3822?source=LinkedIn&_atxsrc=Linkedin&utm_source=Linkedin	Berlin	Custom	
+34	Online Application	Wise	Principal PM	01/31/25	Rejected	2 - Applied	https://wise.jobs/job/principal-product-manager-api-experience-in-london-jid-1188?_atxsrc=OTTA&trid=94b57654-5526-487e-b02e-3248e6f76de0&utm_source=	London	Custom	
+35	Online Application	Lloyds Bank	Cloud PO	02/03/25	Rejected	2 - Applied	https://lbg.wd3.myworkdayjobs.com/en-US/broadbean_external/job/Cloud-Technical-Product-Owner_128568-1	Manchester or Bristol	Cusotm	
+36	Online Application	Meta	PM	01/11/25	Rejected	4 - First Round	https://www.metacareers.com/jobs/1843415202852723/	London	B2C	
+37	Online Application	JPMC	PM	02/06/25	Rejected	2 - Applied	https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210591198/?utm_source=LinkedIn&utm_medium=jobboard	London	AI/ML	
+38	Online Application	JPMC	PM	02/05/25	Rejected	2 - Applied	https://jpmc.fa.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1001/job/210593020/?utm_medium=jobshare&utm_source=External+Job+Share	London	AI/ML	
+39	Personal Referral	Spotify	PM	02/12/25	Active	2 - Applied	https://www.lifeatspotify.com/jobs?c=product	London	Custom	
+40	Online Application	Confluence	Product Owner	02/14/25	Rejected	2 - Applied	https://confluence.pinpointhq.com/postings/a1808d6a-d216-4ebb-9068-bc3a5570b545	London	AI/ML	
+41	Online Application	Datasnipper	Senior PM	02/14/25	Rejected	2 - Applied	https://jobs.ashbyhq.com/datasnipper.com/1ca8ebad-1bb2-4aac-998d-0113c8204f22/application	Amsterdam	Platform	
+42	Online Application	Amazon	PM	02/19/25	Rejected	2 - Applied	https://www.amazon.jobs/en/jobs/2905627/product-manager-amazon-fresh-amazon-fresh-product?cmpid=SPLICX0248M&ss=paid&utm_campaign=cxro&utm_content=job_posting&utm_medium=social_media&utm_source=linkedin.com	Bengaluru	B2C	
+43	Online Application	Amazon	PM	02/19/25	Rejected	2 - Applied	https://www.amazon.jobs/en/jobs/2904830/product-manager-insurance-vas-amazon-freight-partner-afp-eu	Luxembourg	B2C	
+44	Online Application	Wallmart	Staff PM	02/19/25	Rejected	2 - Applied	https://walmart.wd5.myworkdayjobs.com/en-US/WalmartExternal/job/XMLNAME--IND--STAFF--PRODUCT-MANAGER_R-2093249	Bengaluru	Platform	
+45	Online Application	Just Eat	Senior Technical PM		Rejected	2 - Applied	https://careers.justeattakeaway.com/global/en/job/R_043269/Senior-Technical-Product-Manager	London	Platform Engineering	
+46	Online Application	Adobe	Product Manager	02/25/25	Active	2 - Applied		London	B2C	
+47	Online Application	JetBrains	Sr PM	03/03/25	Active	2 - Applied	https://www.jetbrains.com/careers/jobs/senior-product-manager-ai-tooling-1673/	Serbia	Custom	
+48	Online Application	N26	PM	03/03/25	Rejected	2 - Applied	https://n26.com/en-eu/careers/positions/6492044?gh_jid=6492044&gh_src=71b7b4e01	Barcelona	Custom	
+49	Online Application	Get Your Guide	Sr PM	03/03/25	Rejected	2 - Applied	https://www.getyourguide.careers/jobs/6529583?gh_jid=6529583&gh_src=8da695af1	Berlin	B2C	
+50	Online Application	Bolt	Sr PM	03/03/25	Rejected	2 - Applied	https://bolt.eu/en/careers/positions/7869840002/?gh_jid=7869840002	Estonia	B2C	
+53	Online Application	Intuit	Sr PM	03/04/25	Active	2 - Applied	https://jobs.intuit.com/job/-/-/27595/77079640624?cid=job_li_click_in_active-fy20_cn_text_job_intuit-talent&iis=job&iisn=li	Bangalore	Custom	
+54	Online Application	Barclays	Product Owner`	03/06/25	Rejected	2 - Applied	https://search.jobs.barclays/job/knutsford/technical-product-owner/13015/78220894272	London	Platform Engineering	
+55	Online Application	Tesco	Sr PM	03/06/25	Rejected	2 - Applied	https://apply.tesco-careers.com/members/modules/job/detail.php?record=930424	London	Cloud Infra	
+56	Online Application	ServiceNow	Sr Principlal PM	03/06/25	Rejected	2 - Applied	https://careers.servicenow.com/jobs/744000045904015/sr-principal-product-manager-platform-analytics/?trid=2d92f286-613b-4daf-9dfa-6340ffbecf73	Amsterdam	Custom	
+57	Online Application	Trivago	Sr PM	03/06/25	Active	5 - Second Round	https://careers.trivago.com/apply/?gh_jid=7892529002&gh_src=057bad7b2us	Germany	Custom	
+58	Personal Referral	Walmart	Sr PM	03/06/25	Active	2 - Applied	https://walmart.wd5.myworkdayjobs.com/WalmartExternal/job/IN-KA-BANGALORE-Home-Office-PW-II/XMLNAME--IND--Senior-Product-Manager_R-2089036-1/apply?source=LinkedIn	Bengaluru		
+59	Online Application	Agoda	Sr PM	03/15/25	Rejected	2 - Applied	https://careersatagoda.com/job/3208181-senior-product-manager-gurgaon-based/?gh_jid=3208181&gh_src=208785d61#gh-application-container	Gurgaon	Custom	
+60	Online Application	HelloFresh	Sr PM	03/15/25	Rejected	3 - Recruiter Screen	https://careers.hellofresh.com/global/en/job/6642424/Senior-Product-Manager-II-Menu-to-Content-Food-Systems-Alliance-f-m-x	Berlin	Custom	
+61	Online Application	Wise	Sr PM	03/15/25	Rejected	2 - Applied	https://wise.jobs/job/senior-technical-product-manager-cloud-platform-in-london-jid-1423?_atxsrc=OTTA&trid=94b57654-5526-487e-b02e-3248e6f76de0&utm_source=	London	Custom	
+62	Personal Referral	Walmart	Staff PM	03/16/25	Active	2 - Applied	https://www.linkedin.com/jobs/view/4181389535/?trackingId=&refId=&midToken=AQGs3VdEb4-HVw&midSig=2LDBEL9LdD1XI1&trk=eml-email_jobs_saved_job_reminder_01-saved~jobs-0-job_posting&trkEmail=eml-email_jobs_saved_job_reminder_01-saved~jobs-0-job_posting-null-1pmy9u~m8ahv5a1~ii-null-null&eid=1pmy9u-m8ahv5a1-ii&otpToken=MTMwNTFkZTUxMDI5Y2RjNmIyMjQwNGVkNDIxY2U3YjI4ZmNiZDk0NDllYWU4YzYxNzVjZTAzNjY0OTUzNWVmMmZmZGZkMzgxMTFjNmU4ZDYwNDkyYjExZGNiZWQyNmExZmZlMDZmOTQ5YTZjMjRkNmY1MTEsMSwx	Bengaluru	Custom	
+63	Online Application	Zalando	Principal PM	03/16/25	Rejected	2 - Applied	https://jobs.zalando.com/en/jobs/2716731?gh_src=2104be071	Berlin	Custom	
+64	Personal Referral	Salesforce	Senior PM	03/16/25	Rejected	2 - Applied	https://salesforce.wd12.myworkdayjobs.com/External_Career_Site/job/India---Hyderabad/Senior-Product-Manager---Dev-Ops-Platform-Hyd-Only-_JR280922?source=LinkedIn_Jobs	Hyderabad	Custom	
+65	Online Application	JetBrains	PM	03/24/25	Rejected	2 - Applied		Amsetrdam	AI/ML	
+66	Personal Referral	Wise	PM	03/24/25	Rejected	2 - Applied		Talin	B2C	
+67	Personal Referral	Wayfair	PM	03/24/25	Rejected	2 - Applied		Bengaluru	B2C	
+68	Online Application	N26	PM	03/25/2025	Rejected	2 - Applied	https://n26.com/en-eu/careers/positions/6699220?gh_jid=6699220&gh_src=71b7b4e01	Berlin	Custom	
+69	Online Application	Atlassian	Sr PM	04/01/25	Rejected	2 - Applied	https://careers-apac-atlassian.icims.com/jobs/18808/senior-product-manager/job?iis=LinkedIn&iisn=LinkedIn_Job_Ad	Bengaluru	Plarform	
+70	Online Application	Wolt	Product Lead	04/12/25	Rejected	2 - Applied	https://job-boards.greenhouse.io/wolt/jobs/6694366	Berlin	Custom	
+71	Online Application	Babbel	Senior PM	04/14/25	Rejected	2 - Applied	https://jobs.babbel.com/en/jobs/data-analytics/berlin/senior-data-product-manager-data-ai-platform-all-genders-/6387819?gh_src=e30caab11us&gh_jid=6387819	Berlin	Custom	
+72	Online Application	DeepL	Staff PM	04/14/25	Rejected	2 - Applied	https://jobs.ashbyhq.com/DeepL/10c21b35-9eb7-42a1-87b2-8079762a2fd1/application?utm_source=LinkedInJobWrapping	London	Cusotm	
+73	Online Application	make	AI PM	04/15/25	Rejected	2 - Applied	https://www.make.com/en/careers-detail?gh_jid=6534160003	Czechia	AI ML	
+74	Online Application	Trustpilot	Sr PM	04/16/25	Rejected	2 - Applied	https://business.trustpilot.com/jobs/6549139?gh_jid=6549139	Poland	B2C	
+75	Online Application	Dropbox	PM	04/17/25	Rejected	2 - Applied	https://jobs.dropbox.com/listing/6805214/apply?gh_src=aonhf1	Berlin	Custom	
+76	Online Application	Adobe	Senior PM	04/17/25	Rejected	2 - Applied	https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced/job/Senior-Product-Manager_R155438	Noida	Custom	
+76	Online Application	Adobe	Senior PM	04/17/25	Active	2 - Applied	https://careers.adobe.com/us/en/job/R154450/Sr-Product-Manager	Noida	Custom	
+77	Online Application	eBay	Senior PM	04/17/25	Rejected	2 - Applied	https://jobs.ebayinc.com/us/en/job/EBAEBAUSR0066523EXTERNALENUS/Sr-Product-manager-Taxonomy-Catalog?utm_source=linkedin&utm_medium=phenom-feeds	Bengaluru	Custom	
+78	Online Application	DeliveryHero	Sr PM	04/17/25	Active	2 - Applied	https://careers.deliveryhero.com/job/senior-product-manager-agent-ai-logistics-service-in-berlin-germany-jid-4092?_atxsrc=Linkedin&utm_source=Linkedin&source=LinkedIn	Berlin	Custom	
+79	Online Application	JetBrains	Sr PM	04/22/25	Active	2 - Applied	https://www.jetbrains.com/careers/jobs/senior-product-manager-qodana-1502/	Europe	Custom	
+80	Online Application	Siemens	Sr PM	04/22/25	Rejected	2 - Applied	https://jobs.siemens.com/careers/job/563156124033687?hl=en&utm_source=linkedin&domain=siemens.com&sourceType=PREMIUM_POST_SITE	India	Custom	
+81	Online Application	Intuit	Sr PM	04/22/25	Active	2 - Applied	https://globalcareers-intuit.icims.com/jobs/68972/senior-product-manager/job?mode=submit_apply&from=assessment	Bengaluru	Custom	
+82	Online Application	Target	Sr PM	05/01/25	Rejected	2 - Applied	https://corporate.target.com/jobs/w71/14/sr-product-manager-data-platform	Bengaluru	Custom	
+83	Online Application	Delivery Hero	Sr PM	05/01/25	No Longer Recruiting	2 - Applied	https://careers.deliveryhero.com/job/product-manager-developer-platform-in-berlin-germany-jid-4552?_atxsrc=Linkedin&utm_source=Linkedin&source=LinkedIn	Berlin	Custom	
+84	Online Application	Taxfix	Sr PM	05/02/25	Active	2 - Applied	https://jobs.ashbyhq.com/taxfix.com/93a820c9-fd7d-48f3-a687-069c4adff26a	Berlin	Custom	
+85	Online Application	Target	PM	05/06/25	Rejected	2 - Applied	https://corporate.target.com/jobs/w07/28/product-manager-roundel?utm_source=LinkedIn%28Organic%29&utm_medium=Organic&utm_campaign=Feed%7CAll+Locations%7CAll+Roles&source=srm_linkedin_org	Bengaluru	Custom	
+86	Online Application	Redhat	Sr PM	05/07/25	Rejected	2 - Applied	https://redhat.wd5.myworkdayjobs.com/jobs/job/Pune---Tower-6/Senior-Product-Manager-Technical_R-047342-2?%2526%253Fmode=job&%2526iis=Job%252BBoard&%2526iisn=LinkedIn%252BPosting&source=LinkedIn	Pune	Custom	
+87	Online Application	NewRelic	Sr PM	05/07/25	Rejected	2 - Applied	https://job-boards.greenhouse.io/newrelic/jobs/4629553008?gh_jid=4629553008&gh_src=f006f1208us	Hyderabad	Custom	
+88	Online Application	Bluecore	Sr PM	05/07/25	Rejected	2 - Applied	https://www.bluecore.com/job-posting/?gh_jid=5534944004&lever-source=LinkedIn	India	Custom	
+89	Online Application	Confluence	Principal PM	05/07/25	Rejected	2 - Applied	https://careers.confluent.io/jobs/16076971-principal-product-manager	India	Custom	
+90	Online Application	NetApp	PM		Rejected	2 - Applied		Bengaluru		
+91	Online Application	Microsoft	Sr PM	05/08/25	Rejected	2 - Applied	https://jobs.careers.microsoft.com/global/en/job/1822087/Senior-Product-Manager	Hyderabad	Custom	
+92	Online Application	Bolt	Sr PM	05/09/25	Rejected	2 - Applied	https://bolt.eu/en/careers/positions/7869840002/?gh_jid=7869840002	Talin	Custom	
+93	Online Application	Arm	PM	05/09/25	Active	2 - Applied	https://careers.arm.com/job/cambridge/product-manager-machine-learning-tools/33099/78013513408	Cambridge	Custom	
+94	Online Application	Deel	PM	05/09/25	Active	2 - Applied	https://jobs.ashbyhq.com/Deel/3729df77-5669-49f9-9614-33be8abd7549	Remote	Custom	
+95	Online Application	Viator	Sr PM	05/09/25	Rejected	2 - Applied	https://careers.tripadvisor.com/job?jobId=6563554&t=0uxfm5&gh_src=0uxfm5	London	B2B	
+96	Online Application	Instapro	Sr PM	05/09/25	Rejected	2 - Applied	https://careers.instapro.group/o/product-manager-data-capture-tooling/c/new	Amsterdam	Custom	
+97	Online Application	Datadog	PM	05/09/25	Active	2 - Applied	https://careers.datadoghq.com/detail/6583661/?gh_jid=6583661&gh_src=8363eca61	Paris	Custom	
+98	Online Application	Uber	Sr PM	05/10/25	Active	2 - Applied	https://www.uber.com/global/en/careers/list/143192/?iis=Job%20Board%20-%20Recruitment%20Marketing&iisn=LinkedIn&jClickId=26f04beb-de57-47b6-b0b1-05e07abc2bae	Amsterdam	Custom	
+99	Online Application	Salesforce	Sr PM	05/10/25	Rejected	2 - Applied	https://salesforce.wd12.myworkdayjobs.com/en-US/External_Career_Site/job/Senior-Product-Manager--Agentforce_JR295465	Bengaluru	Custom	
+100	Online Application	Wise	SrPM	05/11/25	Rejected	2 - Applied	https://wise.jobs/job/senior-product-manager-investments-in-london-jid-1310?_atxsrc=OTTA&trid=94b57654-5526-487e-b02e-3248e6f76de0&utm_source=	London	Custom	
+101	Online Application	Microsoft	Sr PM	05/16/25	Active	2 - Applied	https://jobs.careers.microsoft.com/global/en/job/1823102	Bangalore	Custom	
+102	Online Application	Atlassian	SrPM	05/16/25	Active	2 - Applied	https://careers-apac-atlassian.icims.com/jobs/18810/senior-product-manager/job?mode=submit_apply&from=assessment	Bangalore	Custom	
+103	Online Application	PayU	SrPM	05/16/25	Active	2 - Applied	https://career-in10.hr.cloud.sap/portalcareer?_s.crb=COFOxjn3WOF%252fUUIf4wEJCufA9UrwBSVnhy17qJkL2Cs%253d	Bangalore	Custom	
+104	Online Application	Intuit	Sr PM	05/16/25	Active	2 - Applied				
+105	Online Application	Lloyds Bank	Sr PM	05/25/25	Active	2 - Applied	https://lbg.wd3.myworkdayjobs.com/broadbean_external/job/London/Senior-Product-Owner_134631-1?utm_source=linkedin&utm_medium=cpc&source=linkedin	London	Custom	
+106	Online Application	Miro	PM	05/25/25	Active	2 - Applied	https://miro.com/careers/vacancy/8005034002/?gh_jid=8005034002	Berlin	Custom	
+107	Online Application	Wayfair	PM	05/25/25	Active	2 - Applied	https://www.wayfair.com/careers/job/l--product-manager--saheli--scrt--bangalore/8004758002?source=Appcast_LinkedIn_Organic	Bengaluru	Custom	
+108	Online Application	Intuit	Sr PM	05/25/25	Active	2 - Applied	globalcareers-intuit.icims.com/jobs/68077/senior-product-manager/job?mode=submit_apply	Bengaluru	Custom	
+109	Online Application	Target	Sr PM	05/25/25	Active	2 - Applied	https://corporate.target.com/jobs/w20/20/sr-product-manager-ppcoe?utm_source=LinkedIn%28Organic%29&utm_medium=Organic&utm_campaign=Feed%7CAll+Locations%7CAll+Roles&source=srm_linkedin_org	Bengaluru	Custom	
+110	Online Application	Microsoft	Sr PM	05/25/25	Active	2 - Applied	https://jobs.careers.microsoft.com/global/en/job/1823103/SENIOR-PRODUCT-MANAGER	Bengaluru	Custom	
