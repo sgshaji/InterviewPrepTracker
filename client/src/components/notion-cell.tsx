@@ -11,6 +11,7 @@ interface NotionCellProps {
   type?: "text" | "date" | "select";
   options?: readonly string[];
   readOnly?: boolean;
+  multiline?: boolean;
 }
 
 // Helper function to format dates beautifully
@@ -35,7 +36,8 @@ export default function NotionCell({
   className,
   type = "text",
   options = [],
-  readOnly = false
+  readOnly = false,
+  multiline = false
 }: NotionCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
