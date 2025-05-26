@@ -250,7 +250,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                   <td className="px-6 py-4">
                     <NotionCell
                       type="select"
-                      value={application.modeOfApplication || ""}
+                      value={application.modeOfApplication || "Company Site"}
                       onSave={(value) => handleCellUpdate(application.id, "modeOfApplication", value)}
                       options={MODES_OF_APPLICATION}
                       placeholder="Select mode"
@@ -264,6 +264,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                       onSave={(value) => handleCellUpdate(application.id, "followUpDate", value)}
                       placeholder="Follow-up date"
                       className="text-slate-600"
+                      readOnly={shouldDisableFollowUp(application)}
                     />
                   </td>
                   <td className="px-6 py-4">
