@@ -1,6 +1,11 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// Alternative email service using Gmail SMTP (more reliable than SendGrid)
+if (!process.env.RESEND_API_KEY) {
+  throw new Error("RESEND_API_KEY environment variable must be set");
+}
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 interface EmailParams {
   to: string;
   from: string;
@@ -11,19 +16,23 @@ interface EmailParams {
 
 export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
-    // For now, we'll use a simple console log for testing
-    // In production, you can set up Gmail SMTP or another service
-    console.log('📧 EMAIL NOTIFICATION:');
-    console.log('To:', params.to);
-    console.log('Subject:', params.subject);
-    console.log('Message:');
-    console.log(params.text);
-    console.log('-------------------');
-    
-    // Simulate successful email send
+    const { data, error } = await resend.emails.send({
+      from: params.from,
+      to: [params.to],
+      subject: params.subject,
+      text: params.text || '',
+      html: params.html || params.text?.replace(/\n/g, '<br>') || '',
+    });
+
+    if (error) {
+      console.error('Resend email error:', error);
+      return false;
+    }
+
+    console.log('✅ Email sent successfully via Resend:', data?.id);
     return true;
   } catch (error) {
-    console.error('Email error:', error);
+    console.error('Email service error:', error);
     return false;
   }
 }
@@ -64,7 +73,7 @@ export async function sendPrepReminder(data: PrepReminderData): Promise<boolean>
     
     const success = await sendEmail({
       to: data.email,
-      from: 'noreply@interviewprep.com', // You can customize this
+      from: 'Interview Prep <onboarding@resend.dev>', // Using Resend's verified domain
       subject,
       text: bodyContent,
       html: bodyContent.replace(/\n/g, '<br>')
