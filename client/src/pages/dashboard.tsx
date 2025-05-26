@@ -5,6 +5,7 @@ import { Briefcase, Calendar, Flame, TrendingUp, Building } from "lucide-react";
 import PrepTimeChart from "@/components/charts/prep-time-chart";
 import ConfidenceChart from "@/components/charts/confidence-chart";
 import PreparationProgressChart from "@/components/charts/preparation-progress-chart";
+import ApplicationFunnelChart from "@/components/charts/application-funnel-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Application, Interview } from "@shared/schema";
@@ -128,6 +129,11 @@ export default function Dashboard() {
           <PrepTimeChart />
           <ConfidenceChart />
           <PreparationProgressChart />
+        </div>
+
+        {/* Application Funnel Section */}
+        <div className="mb-8">
+          <ApplicationFunnelChart />
         </div>
 
         {/* Tables Section */}
