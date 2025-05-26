@@ -1,7 +1,9 @@
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-import { Briefcase, BarChart3, Book, Calendar, ClipboardCheck, User } from "lucide-react";
+import { Briefcase, BarChart3, Book, Calendar, ClipboardCheck, User, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: BarChart3 },
@@ -13,6 +15,7 @@ const navigation = [
 
 export default function Sidebar() {
   const [location] = useLocation();
+  const { user, logoutMutation } = useAuth();
 
   return (
     <div className="w-64 bg-white border-r border-slate-200 flex flex-col">
@@ -52,14 +55,25 @@ export default function Sidebar() {
 
       {/* User Profile */}
       <div className="p-4 border-t border-slate-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-slate-300 rounded-full flex items-center justify-center">
-            <User className="text-slate-600 h-4 w-4" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <User className="text-blue-600 h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-sm font-medium text-slate-900">{user?.username || 'User'}</div>
+              <div className="text-xs text-slate-500">Job Seeker</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-medium text-slate-900">Alex Johnson</div>
-            <div className="text-xs text-slate-500">Product Manager</div>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            className="text-slate-500 hover:text-slate-700"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
