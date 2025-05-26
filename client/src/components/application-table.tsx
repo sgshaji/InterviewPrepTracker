@@ -467,6 +467,7 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                 </tr>
                 );
               })}
+            </tbody>
           </table>
         </div>
       </Card>
