@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { PreparationSession } from "@shared/schema";
 import { Settings, Mail } from "lucide-react";
 
@@ -17,7 +18,19 @@ export default function Preparation() {
     email: '',
     enableAlerts: false,
     missedDaysThreshold: 2,
-    reminderTime: '09:00'
+    reminderTime: '21:00',
+    emailTemplate: `Subject: Missing Preparation Entry for {date}
+
+Hi {userName},
+
+We noticed you haven't filled in your preparation log for today, {date}. Here's what's missing:
+
+{missingCategories}
+
+Take 5 minutes to reflect and fill in your prep log to stay consistent.
+
+You've got this!
+– Interview Prep Tracker`
   });
 
   const { data: sessions, isLoading } = useQuery<PreparationSession[]>({
@@ -91,6 +104,21 @@ export default function Preparation() {
                     value={emailSettings.reminderTime}
                     onChange={(e) => setEmailSettings(prev => ({ ...prev, reminderTime: e.target.value }))}
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="template">Email Template</Label>
+                  <Textarea
+                    id="template"
+                    rows={8}
+                    value={emailSettings.emailTemplate}
+                    onChange={(e) => setEmailSettings(prev => ({ ...prev, emailTemplate: e.target.value }))}
+                    placeholder="Customize your reminder email..."
+                    className="font-mono text-sm"
+                  />
+                  <div className="text-xs text-slate-500">
+                    Available variables: {"{date}"}, {"{userName}"}, {"{missingCategories}"}
+                  </div>
                 </div>
                 
                 <Button 
