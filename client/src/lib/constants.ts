@@ -6,6 +6,7 @@ export const JOB_STATUSES = [
 ] as const;
 
 export const APPLICATION_STAGES = [
+  "No Callback",
   "In Review",
   "HR Round",
   "HM Round",

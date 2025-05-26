@@ -28,12 +28,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/applications", async (req, res) => {
     try {
       const userId = getCurrentUserId();
-      const validatedData = insertApplicationSchema.parse({
+      let data = {
         ...req.body,
         userId,
         dateApplied: req.body.dateApplied || new Date().toISOString().split('T')[0]
-      });
+      };
       
+      // Auto-populate "No Callback" stage for Applied status with blank stage
+      if (data.jobStatus === "Applied" && (!data.applicationStage || data.applicationStage.trim() === "")) {
+        data.applicationStage = "No Callback";
+      }
+      
+      const validatedData = insertApplicationSchema.parse(data);
       const application = await storage.createApplication(validatedData);
       res.status(201).json(application);
     } catch (error) {
@@ -49,8 +55,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/applications/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertApplicationSchema.partial().parse(req.body);
+      let data = { ...req.body };
       
+      // Auto-populate "No Callback" stage for Applied status with blank stage
+      if (data.jobStatus === "Applied" && (!data.applicationStage || data.applicationStage.trim() === "")) {
+        data.applicationStage = "No Callback";
+      }
+      
+      const validatedData = insertApplicationSchema.partial().parse(data);
       const application = await storage.updateApplication(id, validatedData);
       res.json(application);
     } catch (error) {

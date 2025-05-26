@@ -18,6 +18,7 @@ export default function ApplicationFunnelChart() {
   // Process your real application data - realistic flow
   const flowData = {
     "Applied": applications.length,
+    "No Callback": applications.filter(app => app.applicationStage === "No Callback").length,
     "HR Round": applications.filter(app => app.applicationStage === "HR Round").length,
     "HM Round": applications.filter(app => app.applicationStage === "HM Round").length,
     "Panel": applications.filter(app => app.applicationStage === "Panel").length,
@@ -34,7 +35,8 @@ export default function ApplicationFunnelChart() {
     { key: "Offer", count: flowData["Offer"], color: "#22c55e", type: "main" }
   ];
 
-  // Rejection stage (separate)
+  // No callback and rejection stages (separate)
+  const noCallbackStage = { key: "No Callback", count: flowData["No Callback"], color: "#6b7280", type: "rejection" };
   const rejectionStage = { key: "Rejected", count: flowData["Rejected"], color: "#dc2626", type: "rejection" };
 
   const maxCount = Math.max(...mainStages.map(s => s.count), rejectionStage.count);
@@ -89,14 +91,42 @@ export default function ApplicationFunnelChart() {
             );
           })}
 
+          {/* Draw No Callback flow from Applied */}
+          {noCallbackStage.count > 0 && (
+            <g>
+              <path
+                d={`M 135 150 
+                    C 200 180, 500 220, 565 240
+                    L 565 260
+                    C 500 240, 200 200, 135 170
+                    Z`}
+                fill={noCallbackStage.color}
+                opacity="0.4"
+                stroke={noCallbackStage.color}
+                strokeWidth="1"
+              />
+              <text
+                x={350}
+                y={210}
+                textAnchor="middle"
+                fontSize="11"
+                fontWeight="500"
+                fill="#374151"
+                className="pointer-events-none"
+              >
+                {noCallbackStage.count}
+              </text>
+            </g>
+          )}
+
           {/* Draw rejection flows from each stage */}
           {mainStages.map((stage, index) => {
-            if (index === mainStages.length - 1) return null; // Don't draw rejection from Offer stage
+            if (index === 0 || index === mainStages.length - 1) return null; // Skip Applied and Offer stages
             
             const stageX = (index + 1) * 120;
             const rejectionX = 650; // Fixed position for rejections
             const stageY = 120;
-            const rejectionY = 250;
+            const rejectionY = 320;
             
             // Calculate rejections at this stage (estimate based on drop-off)
             const currentCount = stage.count;
@@ -105,7 +135,7 @@ export default function ApplicationFunnelChart() {
             
             if (rejectedAtStage === 0) return null;
             
-            const height = Math.max(3, (rejectedAtStage / maxCount) * 40);
+            const height = Math.max(3, (rejectedAtStage / maxCount) * 30);
 
             return (
               <g key={`rejection-flow-${index}`}>
@@ -198,51 +228,101 @@ export default function ApplicationFunnelChart() {
             );
           })}
 
+          {/* Draw No Callback node */}
+          {noCallbackStage.count > 0 && (
+            <g>
+              <rect
+                x={550}
+                y={240}
+                width={30}
+                height={40}
+                fill={noCallbackStage.color}
+                opacity="0.9"
+                rx="6"
+              />
+              <text
+                x={565}
+                y={230}
+                textAnchor="middle"
+                fontSize="11"
+                fontWeight="600"
+                fill="#374151"
+                className="pointer-events-none"
+              >
+                No Callback
+              </text>
+              <text
+                x={565}
+                y={265}
+                textAnchor="middle"
+                fontSize="12"
+                fontWeight="700"
+                fill="white"
+                className="pointer-events-none"
+              >
+                {noCallbackStage.count}
+              </text>
+              <text
+                x={565}
+                y={295}
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="500"
+                fill="#6b7280"
+                className="pointer-events-none"
+              >
+                {((noCallbackStage.count / flowData.Applied) * 100).toFixed(1)}%
+              </text>
+            </g>
+          )}
+
           {/* Draw rejection node */}
-          <g>
-            <rect
-              x={635}
-              y={220}
-              width={30}
-              height={60}
-              fill={rejectionStage.color}
-              opacity="0.9"
-              rx="6"
-            />
-            <text
-              x={650}
-              y={210}
-              textAnchor="middle"
-              fontSize="12"
-              fontWeight="600"
-              fill="#374151"
-              className="pointer-events-none"
-            >
-              {rejectionStage.key}
-            </text>
-            <text
-              x={650}
-              y={255}
-              textAnchor="middle"
-              fontSize="12"
-              fontWeight="700"
-              fill="white"
-              className="pointer-events-none"
-            >
-              {rejectionStage.count}
-            </text>
-            <text
-              x={650}
-              y={295}
-              textAnchor="middle"
-              fontSize="11"
-              fontWeight="500"
-              fill="#6b7280"
-              className="pointer-events-none"
-            >
-              {((rejectionStage.count / flowData.Applied) * 100).toFixed(1)}%
-            </text>
-          </g>
+          {rejectionStage.count > 0 && (
+            <g>
+              <rect
+                x={635}
+                y={300}
+                width={30}
+                height={40}
+                fill={rejectionStage.color}
+                opacity="0.9"
+                rx="6"
+              />
+              <text
+                x={650}
+                y={290}
+                textAnchor="middle"
+                fontSize="12"
+                fontWeight="600"
+                fill="#374151"
+                className="pointer-events-none"
+              >
+                {rejectionStage.key}
+              </text>
+              <text
+                x={650}
+                y={325}
+                textAnchor="middle"
+                fontSize="12"
+                fontWeight="700"
+                fill="white"
+                className="pointer-events-none"
+              >
+                {rejectionStage.count}
+              </text>
+              <text
+                x={650}
+                y={355}
+                textAnchor="middle"
+                fontSize="11"
+                fontWeight="500"
+                fill="#6b7280"
+                className="pointer-events-none"
+              >
+                {((rejectionStage.count / flowData.Applied) * 100).toFixed(1)}%
+              </text>
+            </g>
+          )}
         </svg>
       </div>
 
