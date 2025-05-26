@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building, Edit, Trash2 } from "lucide-react";
+import { Building, Plus, Trash2 } from "lucide-react";
 import { Application } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import InlineEditCell from "@/components/inline-edit-cell";
 import { useToast } from "@/hooks/use-toast";
+import { JOB_STATUSES, APPLICATION_STAGES, MODES_OF_APPLICATION } from "@/lib/constants";
+import NotionCell from "@/components/notion-cell";
 
 interface ApplicationTableProps {
   applications: Application[];
@@ -24,10 +25,27 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
-      toast({ title: "Application updated successfully" });
     },
     onError: () => {
       toast({ title: "Failed to update application", variant: "destructive" });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: Partial<Application>) => {
+      await apiRequest("POST", "/api/applications", {
+        ...data,
+        dateApplied: data.dateApplied || new Date().toISOString().split('T')[0],
+        jobStatus: data.jobStatus || "Applied",
+        applicationStage: data.applicationStage || "In Review"
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to create application", variant: "destructive" });
     },
   });
 
@@ -71,6 +89,13 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
     updateMutation.mutate({ id, data: { [field]: value } });
   };
 
+  const handleAddNew = () => {
+    createMutation.mutate({
+      companyName: "",
+      roleTitle: "",
+    });
+  };
+
   if (isLoading) {
     return (
       <Card className="border-slate-200 shadow-sm">
@@ -89,90 +114,106 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
   }
 
   return (
-    <Card className="border-slate-200 shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date Applied</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Company</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stage</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Follow-up</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {applications.length === 0 ? (
+    <div className="space-y-4">
+      <Card className="border-slate-200 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center">
-                  <div className="text-slate-500">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Building className="h-8 w-8 text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">No applications yet</h3>
-                    <p>Start tracking your job applications to see them here.</p>
-                  </div>
-                </td>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[120px]">Date Applied</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[140px]">Company</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[160px]">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[120px]">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[120px]">Stage</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[140px]">Resume Version</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[120px]">Mode</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider min-w-[120px]">Follow-up</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-[60px]"></th>
               </tr>
-            ) : (
-              applications.map((application) => (
+            </thead>
+            <tbody className="divide-y divide-slate-200 bg-white">
+              {applications.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="px-6 py-12 text-center">
+                    <div className="text-slate-500">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Building className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-slate-900 mb-2">No applications yet</h3>
+                      <p>Click the + button below to add your first application.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              {applications.map((application) => (
                 <tr key={application.id} className="hover:bg-slate-50 transition-colors group">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                    <InlineEditCell
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      type="date"
                       value={application.dateApplied}
                       onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center mr-3">
-                        <Building className="text-slate-500 h-4 w-4" />
-                      </div>
-                      <InlineEditCell
-                        value={application.companyName}
-                        onSave={(value) => handleCellUpdate(application.id, "companyName", value)}
-                        className="font-medium text-slate-900"
-                      />
-                    </div>
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      value={application.companyName}
+                      onSave={(value) => handleCellUpdate(application.id, "companyName", value)}
+                      placeholder="Company name"
+                    />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                    <InlineEditCell
+                  <td className="px-4 py-2">
+                    <NotionCell
                       value={application.roleTitle}
                       onSave={(value) => handleCellUpdate(application.id, "roleTitle", value)}
+                      placeholder="Role title"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStatusBadge(application.jobStatus)}>
-                      {application.jobStatus}
-                    </Badge>
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      type="select"
+                      value={application.jobStatus}
+                      onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
+                      options={JOB_STATUSES}
+                    />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge className={getStageBadge(application.applicationStage)}>
-                      {application.applicationStage}
-                    </Badge>
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      type="select"
+                      value={application.applicationStage}
+                      onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
+                      options={APPLICATION_STAGES}
+                    />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
-                    <InlineEditCell
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      value={application.resumeVersion || ""}
+                      onSave={(value) => handleCellUpdate(application.id, "resumeVersion", value)}
+                      placeholder="Resume version"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      type="select"
+                      value={application.modeOfApplication || ""}
+                      onSave={(value) => handleCellUpdate(application.id, "modeOfApplication", value)}
+                      options={MODES_OF_APPLICATION}
+                      placeholder="Select mode"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <NotionCell
+                      type="date"
                       value={application.followUpDate || ""}
                       onSave={(value) => handleCellUpdate(application.id, "followUpDate", value)}
-                      placeholder="Set date"
+                      placeholder="Follow-up date"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-2">
+                  <td className="px-4 py-2">
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-primary hover:text-blue-700"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-slate-400 hover:text-red-600"
+                        className="h-8 w-8 text-slate-400 hover:text-red-600"
                         onClick={() => deleteMutation.mutate(application.id)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -180,11 +221,25 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+              ))}
+              {/* Add new row */}
+              <tr className="hover:bg-slate-50 transition-colors">
+                <td colSpan={9} className="px-4 py-3">
+                  <Button
+                    variant="ghost"
+                    onClick={handleAddNew}
+                    disabled={createMutation.isPending}
+                    className="w-full h-8 text-slate-500 hover:text-slate-700 hover:bg-slate-100 border-2 border-dashed border-slate-200 hover:border-slate-300 transition-colors"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {createMutation.isPending ? "Adding..." : "New application"}
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
   );
 }
