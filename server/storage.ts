@@ -20,6 +20,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, asc, and, gte, lte, count, sql } from "drizzle-orm";
+import { cache } from "./cache";
 
 export interface IStorage {
   // Users
