@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Briefcase, Calendar, Flame, TrendingUp, Building } from "lucide-react";
 import PrepTimeChart from "@/components/charts/prep-time-chart";
 import ConfidenceChart from "@/components/charts/confidence-chart";
+import PreparationProgressChart from "@/components/charts/preparation-progress-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Application, Interview } from "@shared/schema";
@@ -123,9 +124,10 @@ export default function Dashboard() {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <PrepTimeChart />
           <ConfidenceChart />
+          <PreparationProgressChart />
         </div>
 
         {/* Tables Section */}
