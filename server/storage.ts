@@ -94,20 +94,27 @@ export class DatabaseStorage implements IStorage {
 
   // Applications
   async getApplications(userId: number): Promise<Application[]> {
+    const startTime = Date.now();
     const cacheKey = cache.generateKey('applications', userId);
     
     // Try to get from cache first
     const cached = await cache.get(cacheKey);
     if (cached) {
+      console.log(`Cache HIT for applications:${userId} in ${Date.now() - startTime}ms`);
       return cached;
     }
 
+    console.log(`Cache MISS for applications:${userId}, fetching from DB...`);
+    
     // If not in cache, fetch from database
+    const dbStart = Date.now();
     const result = await db
       .select()
       .from(applications)
       .where(eq(applications.userId, userId))
       .orderBy(desc(applications.dateApplied));
+    
+    console.log(`DB query took ${Date.now() - dbStart}ms, total: ${Date.now() - startTime}ms`);
     
     // Cache for 5 minutes
     await cache.set(cacheKey, result, 300);
