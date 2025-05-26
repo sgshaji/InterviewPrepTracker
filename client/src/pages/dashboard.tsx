@@ -41,12 +41,6 @@ export default function Dashboard() {
       <Header 
         title="Dashboard" 
         subtitle="Track your interview preparation progress"
-        action={
-          <Button className="bg-primary hover:bg-blue-700">
-            <span className="mr-2">+</span>
-            New Application
-          </Button>
-        }
       />
       
       <main className="flex-1 overflow-y-auto p-6">
