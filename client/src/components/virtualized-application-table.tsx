@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import NotionCell from "@/components/notion-cell";
 import { format } from "date-fns";
 import { Eye, ExternalLink } from "lucide-react";
+import { JOB_STATUSES, APPLICATION_STAGES, MODES_OF_APPLICATION, ROLE_TITLES } from "@/lib/constants";
 
 interface VirtualizedApplicationTableProps {
   applications: Application[];
@@ -50,7 +51,7 @@ const ApplicationRow = memo(({ index, style, data }: { index: number; style: any
 
   return (
     <div style={style} className="flex items-center border-b border-gray-200 hover:bg-gray-50 px-4">
-      <div className="grid grid-cols-8 gap-4 w-full py-3">
+      <div className="grid grid-cols-7 gap-4 w-full py-3">
         {/* Date Applied */}
         <div className="text-sm text-gray-900">
           {format(new Date(application.dateApplied), "dd MMM yy")}
@@ -63,32 +64,50 @@ const ApplicationRow = memo(({ index, style, data }: { index: number; style: any
           className="font-medium"
         />
 
-        {/* Position */}
-        <NotionCell
+        {/* Position (Role Title) - Dropdown */}
+        <select
+          className="border rounded px-2 py-1 text-sm"
           value={application.roleTitle}
-          onSave={(value) => debouncedUpdate("roleTitle", value)}
-        />
+          onChange={e => debouncedUpdate("roleTitle", e.target.value)}
+        >
+          {ROLE_TITLES.map(role => (
+            <option key={role} value={role}>{role}</option>
+          ))}
+        </select>
 
-        {/* Status */}
-        <div>
-          <Badge className={getStatusColor(application.jobStatus)}>
-            {application.jobStatus}
-          </Badge>
-        </div>
+        {/* Status - Dropdown */}
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={application.jobStatus}
+          onChange={e => debouncedUpdate("jobStatus", e.target.value)}
+        >
+          {JOB_STATUSES.map(status => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </select>
 
-        {/* Stage */}
-        <div>
-          <Badge variant="outline" className={getStageColor(application.applicationStage)}>
-            {application.applicationStage}
-          </Badge>
-        </div>
+        {/* Stage - Dropdown */}
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={application.applicationStage}
+          onChange={e => debouncedUpdate("applicationStage", e.target.value)}
+        >
+          {APPLICATION_STAGES.map(stage => (
+            <option key={stage} value={stage}>{stage}</option>
+          ))}
+        </select>
 
-        {/* Mode */}
-        <NotionCell
+        {/* Mode - Dropdown */}
+        <select
+          className="border rounded px-2 py-1 text-sm"
           value={application.modeOfApplication || ""}
-          onSave={(value) => debouncedUpdate("modeOfApplication", value)}
-          placeholder="LinkedIn"
-        />
+          onChange={e => debouncedUpdate("modeOfApplication", e.target.value)}
+        >
+          <option value="">Select</option>
+          {MODES_OF_APPLICATION.map(mode => (
+            <option key={mode} value={mode}>{mode}</option>
+          ))}
+        </select>
 
         {/* Follow-up */}
         <NotionCell
@@ -97,28 +116,6 @@ const ApplicationRow = memo(({ index, style, data }: { index: number; style: any
           type="date"
           placeholder="Select date"
         />
-
-        {/* Actions */}
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onViewDetails(application)}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-          {application.roleUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(application.roleUrl!, "_blank")}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -160,7 +157,7 @@ export default memo(function VirtualizedApplicationTable({
   return (
     <div className="bg-white rounded-lg border border-gray-200">
       {/* Header */}
-      <div className="grid grid-cols-8 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700">
+      <div className="grid grid-cols-7 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700">
         <div>Date Applied</div>
         <div>Company</div>
         <div>Position</div>
@@ -168,7 +165,6 @@ export default memo(function VirtualizedApplicationTable({
         <div>Stage</div>
         <div>Mode</div>
         <div>Follow-up</div>
-        <div>Actions</div>
       </div>
 
       {/* Virtualized List */}
