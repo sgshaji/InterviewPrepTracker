@@ -1,44 +1,69 @@
-import { createClient } from 'redis';
+import { Redis } from '@upstash/redis';
 
 class CacheService {
-  private memoryCache = new Map<string, { data: any; expires: number }>();
-  private isConnected = true; // Always connected for in-memory cache
+  private redis: Redis;
+  private isConnected = false;
+
+  constructor() {
+    if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+      throw new Error('Redis configuration is missing. Please set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN');
+    }
+
+    this.redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
 
   async connect() {
-    console.log('Using high-performance in-memory cache');
-    this.isConnected = true;
+    try {
+      await this.redis.ping();
+      this.isConnected = true;
+      console.log('✅ Connected to Upstash Redis');
+    } catch (error) {
+      console.error('❌ Failed to connect to Redis:', error);
+      throw error;
+    }
   }
 
   async get(key: string) {
     if (!this.isConnected) return null;
-    const item = this.memoryCache.get(key);
-    if (!item) return null;
-    
-    if (Date.now() > item.expires) {
-      this.memoryCache.delete(key);
+    try {
+      return await this.redis.get(key);
+    } catch (error) {
+      console.error('Redis get error:', error);
       return null;
     }
-    
-    return item.data;
   }
 
   async set(key: string, value: any, ttlSeconds = 300) {
     if (!this.isConnected) return;
-    const expires = Date.now() + (ttlSeconds * 1000);
-    this.memoryCache.set(key, { data: value, expires });
+    try {
+      await this.redis.set(key, value, { ex: ttlSeconds });
+    } catch (error) {
+      console.error('Redis set error:', error);
+    }
   }
 
   async del(key: string) {
     if (!this.isConnected) return;
-    this.memoryCache.delete(key);
+    try {
+      await this.redis.del(key);
+    } catch (error) {
+      console.error('Redis del error:', error);
+    }
   }
 
   async invalidatePattern(pattern: string) {
     if (!this.isConnected) return;
-    const keys = Array.from(this.memoryCache.keys()).filter(key => 
-      key.includes(pattern.replace('*', ''))
-    );
-    keys.forEach(key => this.memoryCache.delete(key));
+    try {
+      const keys = await this.redis.keys(pattern);
+      if (keys.length > 0) {
+        await this.redis.del(...keys);
+      }
+    } catch (error) {
+      console.error('Redis invalidatePattern error:', error);
+    }
   }
 
   generateKey(prefix: string, ...parts: (string | number)[]): string {
