@@ -19,7 +19,7 @@ import {
   type InsertReminder
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, asc, and, gte, lte, count, sql } from "drizzle-orm";
+import { eq, desc, asc, and, gte, lte, count, sql, inArray } from "drizzle-orm";
 import { cache } from "./cache";
 
 export interface IStorage {
@@ -30,7 +30,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Applications
-  getApplications(userId: number): Promise<Application[]>;
+  getApplications(userId: number, page?: number, limit?: number): Promise<{ totalCount: number; applications: Application[] }>;
   getApplication(id: number): Promise<Application | undefined>;
   createApplication(application: InsertApplication): Promise<Application>;
   updateApplication(id: number, application: Partial<InsertApplication>): Promise<Application>;
@@ -99,9 +99,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Applications
-  async getApplications(userId: number): Promise<Application[]> {
+  async getApplications(userId: number, page: number = 0, limit: number = 50): Promise<{ totalCount: number; applications: Application[] }> {
     const startTime = Date.now();
-    const cacheKey = cache.generateKey('applications', userId);
+    const cacheKey = cache.generateKey('applications', userId, page, limit);
     
     // Try to get from cache first
     const cached = await cache.get(cacheKey);
@@ -114,17 +114,29 @@ export class DatabaseStorage implements IStorage {
     
     // If not in cache, fetch from database
     const dbStart = Date.now();
+
+    // Get total count
+    const [{ count: totalCount }] = await db
+      .select({ count: count() })
+      .from(applications)
+      .where(eq(applications.userId, userId));
+
+    // Get paginated results
     const result = await db
       .select()
       .from(applications)
       .where(eq(applications.userId, userId))
-      .orderBy(desc(applications.dateApplied));
+      .orderBy(desc(applications.dateApplied))
+      .limit(limit)
+      .offset(page * limit);
     
     console.log(`DB query took ${Date.now() - dbStart}ms, total: ${Date.now() - startTime}ms`);
     
+    const response = { totalCount: Number(totalCount), applications: result };
+    
     // Cache for 5 minutes
-    await cache.set(cacheKey, result, 300);
-    return result;
+    await cache.set(cacheKey, response, 300);
+    return response;
   }
 
   async getApplication(id: number): Promise<Application | undefined> {
@@ -326,12 +338,15 @@ export class DatabaseStorage implements IStorage {
       .from(applications)
       .where(eq(applications.userId, userId));
 
+    // Updated logic for activeInterviews
+    const interviewStages = ["HR Round", "HM Round", "Panel", "Case Study"];
     const [activeInterviewsResult] = await db
       .select({ count: count() })
-      .from(interviews)
+      .from(applications)
       .where(and(
-        eq(interviews.userId, userId),
-        eq(interviews.status, "Scheduled")
+        eq(applications.userId, userId),
+        eq(applications.jobStatus, "Active"),
+        inArray(applications.applicationStage, interviewStages)
       ));
 
     const [offersResult] = await db

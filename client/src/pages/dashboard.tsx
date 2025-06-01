@@ -9,10 +9,24 @@ import ApplicationFunnelChart from "@/components/charts/application-funnel-chart
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Application, Interview } from "@shared/schema";
+import { useNavigate } from "react-router-dom";
+
+type DashboardStats = {
+  totalApplications: number;
+  activeInterviews: number;
+  prepStreak: number;
+  successRate: number;
+};
 
 export default function Dashboard() {
-  const { data: stats } = useQuery({
+  const navigate = useNavigate();
+  const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/stats");
+      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
+      return res.json();
+    },
   });
 
   const { data: applications } = useQuery<Application[]>({
@@ -23,7 +37,7 @@ export default function Dashboard() {
     queryKey: ["/api/interviews"],
   });
 
-  const recentApplications = applications?.slice(0, 3) || [];
+  const recentApplications = Array.isArray(applications) ? applications.slice(0, 3) : [];
   const upcomingInterviews = interviews?.filter(i => i.status === "Scheduled").slice(0, 3) || [];
 
   const getStatusBadge = (status: string) => {
@@ -64,23 +78,25 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 shadow-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-slate-500 text-sm font-medium">Active Interviews</p>
-                  <p className="text-3xl font-bold text-slate-900 mt-2">{stats?.activeInterviews || 0}</p>
+          <div className="cursor-pointer" onClick={() => navigate("/applications?interviewing=true")}>
+            <Card className="border-slate-200 shadow-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 text-sm font-medium">Active Interviews</p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{stats?.activeInterviews || 0}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                    <Calendar className="text-amber-600 h-6 w-6" />
+                  </div>
                 </div>
-                <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                  <Calendar className="text-amber-600 h-6 w-6" />
+                <div className="flex items-center mt-4 text-sm">
+                  <span className="text-emerald-600 font-medium">+3</span>
+                  <span className="text-slate-500 ml-2">this week</span>
                 </div>
-              </div>
-              <div className="flex items-center mt-4 text-sm">
-                <span className="text-emerald-600 font-medium">+3</span>
-                <span className="text-slate-500 ml-2">this week</span>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           <Card className="border-slate-200 shadow-sm">
             <CardContent className="p-6">

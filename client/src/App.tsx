@@ -1,8 +1,8 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Applications from "@/pages/applications";
@@ -19,10 +19,11 @@ import { ProtectedRoute } from "@/lib/protected-route";
 function Router() {
   return (
     <Switch>
-      {/* Auth pages without sidebar */}
-      <Route path="/login" component={LoginPage} />
-      <Route path="/register" component={RegisterPage} />
-      
+      {/* Redirect auth pages to dashboard */}
+      <Route path="/login">{() => <Redirect to="/" />}</Route>
+      <Route path="/register">{() => <Redirect to="/" />}</Route>
+      <Route path="/auth">{() => <Redirect to="/" />}</Route>
+
       {/* Main app with sidebar */}
       <Route>
         <div className="flex h-screen bg-slate-50">
@@ -50,8 +51,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
-          <Router />
-          <Toaster />
+          <ToastProvider>
+            <Router />
+            <ToastViewport />
+          </ToastProvider>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -10,17 +10,64 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { validateDatabaseInput, asyncHandler, requestLogger } from "./middleware";
+import compression from "compression";
+import { eq, and, inArray, sql, desc, count, or } from "drizzle-orm";
+import { db } from "./db";
+import { applications } from '../shared/schema';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Enable compression
+  app.use(compression());
+
   // Mock user ID for demo purposes - in real app would come from authentication
   const getCurrentUserId = () => 1;
+
+  function getStatusForStage(stage: string, currentStatus: string): string {
+    if (["HR Round", "HM Round", "Panel", "Case Study"].includes(stage)) return "In Progress";
+    if (stage === "Rejected") return "Rejected";
+    if (stage === "Offer") return "Offer";
+    return currentStatus;
+  }
 
   // Applications endpoints
   app.get("/api/applications", async (req, res) => {
     try {
       const userId = getCurrentUserId();
-      const applications = await storage.getApplications(userId);
-      res.json(applications);
+      const page = Math.max(0, parseInt(req.query.page as string) || 0);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const interviewing = req.query.interviewing === "true";
+      const search = req.query.search as string | undefined;
+
+      const interviewStages = ["HR Round", "HM Round", "Panel", "Case Study"];
+
+      const whereConditions = [
+        eq(applications.userId, userId),
+        interviewing ? eq(applications.jobStatus, "Active") : undefined,
+        interviewing ? inArray(applications.applicationStage, interviewStages) : undefined,
+        typeof search === "string" && search.trim() !== ""
+          ? or(
+              sql`${applications.companyName} ILIKE '%' || ${search} || '%'`,
+              sql`${applications.roleTitle} ILIKE '%' || ${search} || '%'`
+            )
+          : undefined
+      ].filter(Boolean);
+
+      const whereClause = and(...whereConditions);
+
+      const [totalCountResult] = await db
+        .select({ count: count() })
+        .from(applications)
+        .where(whereClause);
+
+      const apps = await db
+        .select()
+        .from(applications)
+        .where(whereClause)
+        .orderBy(desc(applications.createdAt))
+        .limit(limit)
+        .offset(page * limit);
+
+      res.json({ totalCount: totalCountResult.count, applications: apps });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch applications" });
     }
@@ -40,15 +87,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data.applicationStage = "No Callback";
       }
       
-      const validatedData = insertApplicationSchema.parse(data);
+      // Auto-sync jobStatus with applicationStage
+      if (data.applicationStage) {
+        data.jobStatus = getStatusForStage(data.applicationStage, data.jobStatus || "Applied");
+      }
+      
+      const parsed = insertApplicationSchema.safeParse(data);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid application data", errors: parsed.error.errors });
+      }
+      const validatedData = parsed.data;
       const application = await storage.createApplication(validatedData);
       res.status(201).json(application);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error creating application:", error);
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid application data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create application", error: error.message });
+        res.status(500).json({ message: "Failed to create application", error: error instanceof Error ? error.message : "Unknown error" });
       }
     }
   });
@@ -61,6 +117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Auto-populate "No Callback" stage for Applied status with blank stage
       if (data.jobStatus === "Applied" && (!data.applicationStage || data.applicationStage.trim() === "")) {
         data.applicationStage = "No Callback";
+      }
+      
+      // Auto-sync jobStatus with applicationStage
+      if (data.applicationStage) {
+        data.jobStatus = getStatusForStage(data.applicationStage, data.jobStatus || "Applied");
       }
       
       const validatedData = insertApplicationSchema.partial().parse(data);

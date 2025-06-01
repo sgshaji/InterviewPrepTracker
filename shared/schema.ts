@@ -135,6 +135,9 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  companyName: z.string().min(1, "Company name is required"),
+  roleTitle: z.string().min(1, "Role title is required"),
 });
 
 export const insertPreparationSessionSchema = createInsertSchema(preparationSessions).omit({

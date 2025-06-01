@@ -1,3 +1,4 @@
+// /client/src/components/ui/toast.tsx
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -113,6 +114,41 @@ ToastDescription.displayName = ToastPrimitives.Description.displayName
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>
 
 type ToastActionElement = React.ReactElement<typeof ToastAction>
+
+// ✅ Custom Hook now included here
+let toastId = 0;
+const toastQueue: ToastProps[] = [];
+
+const listeners: React.Dispatch<React.SetStateAction<ToastProps[]>>[] = [];
+
+export function useToast() {
+  const [toasts, setToasts] = React.useState<ToastProps[]>([]);
+
+  React.useEffect(() => {
+    listeners.push(setToasts);
+    return () => {
+      const index = listeners.indexOf(setToasts);
+      if (index > -1) listeners.splice(index, 1);
+    };
+  }, []);
+
+  const toast = React.useCallback((toast: Omit<ToastProps, "id">) => {
+    const id = `toast-${++toastId}`;
+    const newToast = { ...toast, id } as ToastProps;
+
+    listeners.forEach((listener) => {
+      listener((currentToasts) => [...currentToasts, newToast]);
+    });
+
+    setTimeout(() => {
+      listeners.forEach((listener) => {
+        listener((currentToasts) => currentToasts.filter((t) => t.id !== id));
+      });
+    }, 3000);
+  }, []);
+
+  return { toast, toasts };
+}
 
 export {
   type ToastProps,

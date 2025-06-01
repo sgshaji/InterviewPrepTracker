@@ -21,10 +21,24 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Application> }) => {
-      await apiRequest("PUT", `/api/applications/${id}`, data);
+      return await apiRequest<Application>("PUT", `/api/applications/${id}`, data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+    onSuccess: (updatedApplication) => {
+      queryClient.setQueryData<{ pages: { totalCount: number; applications: Application[] }[] }>(
+        ["/api/applications"],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              applications: page.applications.map((app) =>
+                app.id === updatedApplication.id ? { ...app, ...updatedApplication } : app
+              ),
+            })),
+          };
+        }
+      );
     },
     onError: () => {
       toast({ title: "Failed to update application", variant: "destructive" });
@@ -33,15 +47,33 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
 
   const createMutation = useMutation({
     mutationFn: async (data: Partial<Application>) => {
-      await apiRequest("POST", "/api/applications", {
+      return await apiRequest<Application>("POST", "/api/applications", {
         ...data,
         dateApplied: data.dateApplied || new Date().toISOString().split('T')[0],
         jobStatus: data.jobStatus || "Applied",
         applicationStage: data.applicationStage || "In Review"
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+    onSuccess: (newApplication) => {
+      queryClient.setQueryData<{ pages: { totalCount: number; applications: Application[] }[] }>(
+        ["/api/applications"],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page, index) => {
+              if (index === 0) {
+                return {
+                  ...page,
+                  totalCount: page.totalCount + 1,
+                  applications: [newApplication, ...page.applications],
+                };
+              }
+              return page;
+            }),
+          };
+        }
+      );
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: () => {
@@ -52,9 +84,23 @@ export default function ApplicationTable({ applications, isLoading }: Applicatio
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest("DELETE", `/api/applications/${id}`);
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/applications"] });
+    onSuccess: (deletedId) => {
+      queryClient.setQueryData<{ pages: { totalCount: number; applications: Application[] }[] }>(
+        ["/api/applications"],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) => ({
+              ...page,
+              totalCount: page.totalCount - 1,
+              applications: page.applications.filter((app) => app.id !== deletedId),
+            })),
+          };
+        }
+      );
       toast({ title: "Application deleted successfully" });
     },
     onError: () => {
