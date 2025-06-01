@@ -127,105 +127,76 @@ const StatusIndicator = ({
   };
 
   return (
-    <Dropdown
-      options={jobStatuses}
-      value={status}
-      onChange={onChange}
-      color={getStatusColor(status)}
-    />
-  );
-};
+    <div style={style} className="flex items-center border-b border-gray-200 hover:bg-gray-50 px-4">
+      <div className="grid grid-cols-8 gap-4 w-full py-3">
+        {/* Date Applied */}
+        <div className="text-sm text-gray-900">
+          {format(new Date(application.dateApplied), "dd MMM yy")}
+        </div>
 
-function getStatusForStage(stage: string, currentStatus: string) {
-  if (["HR Round", "HM Round", "Panel", "Case Study"].includes(stage)) return "In Progress";
-  if (stage === "Rejected") return "Rejected";
-  if (stage === "Offer") return "Offer";
-  return currentStatus;
-}
-
-const Row = ({ 
-  index, 
-  style, 
-  data 
-}: { 
-  index: number; 
-  style: React.CSSProperties; 
-  data: { 
-    applications: Application[]; 
-    onEdit: (app: Application, field: string, value: string) => void;
-    onDelete?: (application: Application) => void;
-  } 
-}) => {
-  const application = data.applications[index];
-  const { onEdit, onDelete } = data;
-  
-  return (
-    <div 
-      style={{ ...style, transition: 'background-color 0.15s ease' }} 
-      className="flex items-center px-4 border-b border-gray-800 hover:bg-white/5 group"
-    >
-      <div className="flex-1 min-w-[120px]">
-        <span className="text-sm font-medium text-gray-200">{formatDate(application.dateApplied)}</span>
-      </div>
-      
-      <div className="flex-1 min-w-[200px]">
-        <input
-          type="text"
+        {/* Company */}
+        <NotionCell
           value={application.companyName}
-          onChange={(e) => onEdit(application, 'companyName', e.target.value)}
-          className="w-full bg-transparent text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-700 rounded px-2 py-1"
-          placeholder="Enter company name..."
+          onSave={(value) => debouncedUpdate("companyName", value)}
+          className="font-medium"
         />
-      </div>
-      
-      <div className="flex-1 min-w-[250px]">
-        <Dropdown
-          options={roleTitles}
-          value={application.roleTitle || 'Select role...'}
-          onChange={(value) => onEdit(application, 'roleTitle', value)}
+
+        {/* Position */}
+        <NotionCell
+          value={application.roleTitle}
+          onSave={(value) => debouncedUpdate("roleTitle", value)}
         />
-      </div>
-      
-      <div className="flex-1 min-w-[150px]">
-        <span className="text-sm text-gray-200">{application.jobStatus}</span>
-      </div>
-      
-      <div className="flex-1 min-w-[150px]">
-        <Dropdown
-          options={applicationStages}
-          value={application.applicationStage || 'In Review'}
-          onChange={(value) => {
-            const newStatus = getStatusForStage(value, application.jobStatus);
-            onEdit(application, 'applicationStage', value);
-            if (newStatus !== application.jobStatus) {
-              onEdit(application, 'jobStatus', newStatus);
-            }
-          }}
+
+        {/* Status */}
+        <div>
+          <Badge className={getStatusColor(application.jobStatus)}>
+            {application.jobStatus}
+          </Badge>
+        </div>
+
+        {/* Stage */}
+        <div>
+          <Badge variant="outline" className={getStageColor(application.applicationStage)}>
+            {application.applicationStage}
+          </Badge>
+        </div>
+
+        {/* Mode */}
+        <NotionCell
+          value={application.modeOfApplication || ""}
+          onSave={(value) => debouncedUpdate("modeOfApplication", value)}
+          placeholder="LinkedIn"
         />
-      </div>
-      
-      <div className="flex-1 min-w-[120px]">
-        <span className="text-sm text-gray-200">{application.resumeVersion}</span>
-      </div>
-      
-      <div className="flex-1 min-w-[150px]">
-        <Dropdown
-          options={modeOfApplications}
-          value={application.modeOfApplication || 'Company Website'}
-          onChange={(value) => onEdit(application, 'modeOfApplication', value)}
+
+        {/* Follow-up */}
+        <NotionCell
+          value={application.followUpDate || ""}
+          onSave={(value) => debouncedUpdate("followUpDate", value)}
+          type="date"
+          placeholder="Select date"
         />
-      </div>
-      <div className="flex items-center justify-end min-w-[40px]">
-        {onDelete && (
+
+        {/* Actions */}
+        <div className="flex items-center space-x-2">
           <Button
             variant="ghost"
-            size="icon"
-            onClick={() => onDelete(application)}
-            className="text-red-400 hover:text-red-600"
+            size="sm"
+            onClick={() => onViewDetails(application)}
+            className="text-gray-500 hover:text-gray-700"
           >
-            <Trash2 className="w-4 h-4" />
+            <Eye className="h-4 w-4" />
           </Button>
-        )}
+          {application.roleUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.open(application.roleUrl!, "_blank")}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -314,6 +285,32 @@ export const VirtualizedApplicationTable = React.forwardRef<any, VirtualizedAppl
       </div>
     );
   }
-);
-VirtualizedApplicationTable.displayName = "VirtualizedApplicationTable";
-export default VirtualizedApplicationTable;
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200">
+      {/* Header */}
+      <div className="grid grid-cols-8 gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-700">
+        <div>Date Applied</div>
+        <div>Company</div>
+        <div>Position</div>
+        <div>Status</div>
+        <div>Stage</div>
+        <div>Mode</div>
+        <div>Follow-up</div>
+        <div>Actions</div>
+      </div>
+
+      {/* Virtualized List */}
+      <List
+        height={Math.min(applications.length * 70, 500)} // Max height of 500px
+        width="100%"
+        itemCount={applications.length}
+        itemSize={70}
+        itemData={itemData}
+        overscanCount={5} // Render 5 extra items for smooth scrolling
+      >
+        {ApplicationRow}
+      </List>
+    </div>
+  );
+});
