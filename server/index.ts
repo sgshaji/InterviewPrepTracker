@@ -8,8 +8,15 @@ import { setupAuth } from "./auth";
 import { setupSecurity } from "./security";
 import dotenv from 'dotenv';
 
-// Load environment variables
+// Load environment variables before any other imports
 dotenv.config();
+
+// Verify environment variables are loaded
+console.log('Environment Check:', {
+  DATABASE_URL: process.env.DATABASE_URL ? '✓ Set' : '✗ Missing',
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT
+});
 
 const app = express();
 
