@@ -41,7 +41,7 @@ export const securityHeaders = helmet({
 // Rate limiting configuration
 export const rateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // Limit each IP to 100 requests per windowMs
+  max: isDev ? 10000 : parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'), // Much higher in dev
   message: "Too many requests from this IP, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
@@ -50,7 +50,7 @@ export const rateLimiter = rateLimit({
 // API rate limiting (more strict)
 export const apiRateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: 50,
+  max: isDev ? 10000 : 50, // Much higher in dev
   message: "Too many API requests, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
