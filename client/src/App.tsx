@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,31 +18,27 @@ import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
-    <Switch>
-      {/* Redirect auth pages to dashboard */}
-      <Route path="/login">{() => <Redirect to="/" />}</Route>
-      <Route path="/register">{() => <Redirect to="/" />}</Route>
-      <Route path="/auth">{() => <Redirect to="/" />}</Route>
+    <div className="flex h-screen bg-slate-50">
+      <ErrorBoundary>
+        <Sidebar />
+      </ErrorBoundary>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Routes>
+          {/* Redirect auth pages to dashboard */}
+          <Route path="/login" element={<Navigate to="/" />} />
+          <Route path="/register" element={<Navigate to="/" />} />
+          <Route path="/auth" element={<Navigate to="/" />} />
 
-      {/* Main app with sidebar */}
-      <Route>
-        <div className="flex h-screen bg-slate-50">
-          <ErrorBoundary>
-            <Sidebar />
-          </ErrorBoundary>
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Switch>
-              <ProtectedRoute path="/" component={() => <ErrorBoundary><Dashboard /></ErrorBoundary>} />
-              <ProtectedRoute path="/applications" component={() => <ErrorBoundary><Applications /></ErrorBoundary>} />
-              <ProtectedRoute path="/preparation" component={() => <ErrorBoundary><Preparation /></ErrorBoundary>} />
-              <ProtectedRoute path="/interviews" component={() => <ErrorBoundary><Interviews /></ErrorBoundary>} />
-              <ProtectedRoute path="/assessments" component={() => <ErrorBoundary><Assessments /></ErrorBoundary>} />
-              <Route component={NotFound} />
-            </Switch>
-          </div>
-        </div>
-      </Route>
-    </Switch>
+          {/* Protected main routes */}
+          <Route path="/" element={<ProtectedRoute><ErrorBoundary><Dashboard /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/applications" element={<ProtectedRoute><ErrorBoundary><Applications /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/preparation" element={<ProtectedRoute><ErrorBoundary><Preparation /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/interviews" element={<ProtectedRoute><ErrorBoundary><Interviews /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/assessments" element={<ProtectedRoute><ErrorBoundary><Assessments /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </div>
+    </div>
   );
 }
 

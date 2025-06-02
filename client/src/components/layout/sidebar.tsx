@@ -1,8 +1,6 @@
-import { useLocation } from "wouter";
-import { Link } from "wouter";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Briefcase, BarChart3, Book, Calendar, ClipboardCheck, User, LogOut } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
+import { Briefcase, BarChart3, Book, Calendar, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navigation = [
@@ -14,8 +12,7 @@ const navigation = [
 ];
 
 export default function Sidebar() {
-  const [location] = useLocation();
-  // const { user, logoutMutation } = useAuth(); // Commented out for core testing
+  const location = useLocation();
 
   return (
     <div className="w-64 bg-white border-r border-slate-200 flex flex-col">
@@ -33,12 +30,12 @@ export default function Sidebar() {
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
           const Icon = item.icon;
-          const isActive = location === item.href;
-          
+          const isActive = location.pathname === item.href;
+
           return (
             <Link
               key={item.name}
-              href={item.href}
+              to={item.href}
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-lg font-medium transition-colors",
                 isActive
@@ -52,32 +49,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      {/* User Profile */}
-      <div className="p-4 border-t border-slate-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <User className="text-blue-600 h-4 w-4" />
-            </div>
-            <div>
-              <div className="text-sm font-medium text-slate-900">Alex Johnson</div>
-              <div className="text-xs text-slate-500">Job Seeker</div>
-            </div>
-          </div>
-          {/* Commented out auth functionality for core testing
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-            className="text-slate-500 hover:text-slate-700"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-          */}
-        </div>
-      </div>
     </div>
   );
 }

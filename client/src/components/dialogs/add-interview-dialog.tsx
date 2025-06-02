@@ -23,6 +23,7 @@ import { insertInterviewSchema, Application } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { INTERVIEW_STAGES, INTERVIEW_STATUSES } from "@/lib/constants";
+import type { SubmitHandler } from "react-hook-form";
 
 const formSchema = insertInterviewSchema.omit({ userId: true });
 
@@ -35,16 +36,40 @@ export default function AddInterviewDialog({ open, onOpenChange }: AddInterviewD
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: applications } = useQuery<Application[]>({
+  const {
+    data: applications,
+    isLoading: isAppsLoading,
+    isError: isAppsError,
+  } = useQuery<Application[]>({
     queryKey: ["/api/applications"],
   });
+
+  if (isAppsLoading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <div className="p-4">Loading applications...</div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (isAppsError) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <div className="p-4 text-red-500">Failed to load applications</div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       applicationId: 0,
       interviewStage: "",
-      interviewDate: "",
+      interviewDate: null,
       status: "Scheduled",
       prepResources: "",
       assignedTasks: "",
@@ -73,7 +98,7 @@ export default function AddInterviewDialog({ open, onOpenChange }: AddInterviewD
     },
   });
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
+  const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = (data) => {
     createMutation.mutate(data);
   };
 
