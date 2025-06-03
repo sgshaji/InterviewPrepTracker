@@ -161,6 +161,18 @@ export const insertReminderSchema = createInsertSchema(reminders).omit({
   createdAt: true,
 });
 
+export const updateApplicationSchema = z
+  .object({
+    companyName: z.string().min(1, "Company name is required"),
+    roleTitle: z.string().min(1, "Role title is required"),
+    dateApplied: z.string().optional(), // format: YYYY-MM-DD
+    jobStatus: z.string().optional(), // Applied, In Progress, Rejected, Offer
+    applicationStage: z.string().min(1, "Stage is required"),
+    resumeVersion: z.string().nullable().optional(),
+    modeOfApplication: z.string().min(1, "Mode of application is required"),
+  })
+  .strict();
+  
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;

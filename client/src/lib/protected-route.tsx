@@ -1,12 +1,6 @@
-import { Route } from "wouter";
+import React from "react";
 
-export function ProtectedRoute({
-  path,
-  component: Component,
-}: {
-  path: string;
-  component: () => React.JSX.Element;
-}) {
-  // Always render the component, bypassing auth
-  return <Route path={path} component={Component} />;
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  // ⚠️ Auth temporarily disabled for local dev
+  return <>{children}</>;
 }
