@@ -9,9 +9,13 @@ class CacheService {
       throw new Error('Redis configuration is missing. Please set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN');
     }
 
+    // Clean the URL by removing any extra quotes
+    const cleanUrl = process.env.UPSTASH_REDIS_REST_URL.replace(/^["']|["']$/g, '');
+    const cleanToken = process.env.UPSTASH_REDIS_REST_TOKEN.replace(/^["']|["']$/g, '');
+
     this.redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      url: cleanUrl,
+      token: cleanToken,
     });
   }
 
