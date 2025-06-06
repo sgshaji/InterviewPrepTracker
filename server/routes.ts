@@ -15,6 +15,8 @@ import compression from "compression";
 import { eq, and, inArray, sql, desc, count, or } from "drizzle-orm";
 import { db } from "./db";
 import { applications } from '../shared/schema';
+import { spawn } from 'child_process';
+import path from 'path';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enable compression
@@ -22,6 +24,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mock user ID for demo purposes - in real app would come from authentication
   const getCurrentUserId = () => 1;
+
+  // Company logo API endpoint
+  app.get("/api/company-logo/:company", async (req, res) => {
+    try {
+      const companyName = decodeURIComponent(req.params.company);
+      if (!companyName || companyName.trim() === '') {
+        return res.status(400).json({ error: 'Company name is required' });
+      }
+
+      // Cache key for logo data
+      const cacheKey = cache.generateKey('logo', companyName.toLowerCase());
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
+      // Execute Python logo service
+      const pythonScript = path.join(__dirname, 'logo-service.py');
+      const pythonProcess = spawn('python3', [pythonScript, companyName]);
+      
+      let output = '';
+      let error = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        error += data.toString();
+      });
+
+      pythonProcess.on('close', async (code) => {
+        if (code === 0 && output) {
+          try {
+            const result = JSON.parse(output.trim());
+            // Cache for 24 hours
+            await cache.set(cacheKey, result, 86400);
+            res.json(result);
+          } catch (parseError) {
+            res.status(500).json({ error: 'Failed to parse logo data' });
+          }
+        } else {
+          // Fallback to initials
+          const initials = companyName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+          const colors = ['3B82F6', '10B981', '8B5CF6', 'F59E0B', 'EF4444', '6366F1'];
+          const colorIndex = companyName.length % colors.length;
+          const fallback = {
+            url: `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${colors[colorIndex]}&color=fff&size=128&rounded=true&bold=true`,
+            source: 'initials',
+            initials
+          };
+          await cache.set(cacheKey, fallback, 86400);
+          res.json(fallback);
+        }
+      });
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        pythonProcess.kill();
+        const initials = companyName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+        const fallback = {
+          url: `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=6366F1&color=fff&size=128&rounded=true&bold=true`,
+          source: 'timeout',
+          initials
+        };
+        res.json(fallback);
+      }, 10000);
+
+    } catch (error) {
+      console.error('Logo API error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   function getStatusForStage(stage: string, currentStatus: string): string {
     if (["HR Round", "HM Round", "Panel", "Case Study"].includes(stage)) return "In Progress";
