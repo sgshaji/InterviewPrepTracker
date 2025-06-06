@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { cache } from "./cache";
 import { 
   insertApplicationSchema, 
   insertPreparationSessionSchema, 
@@ -38,6 +39,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const interviewing = req.query.interviewing === "true";
       const search = req.query.search as string | undefined;
 
+      // Generate cache key based on query parameters
+      const cacheKey = cache.generateKey('applications', userId, page, limit, interviewing ? '1' : '0', search || '');
+      
+      // Try to get from cache first
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
       const interviewStages = ["HR Round", "HM Round", "Panel", "Case Study"];
 
       const whereConditions = [
@@ -67,7 +77,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(limit)
         .offset(page * limit);
 
-      res.json({ totalCount: totalCountResult.count, applications: apps });
+      const result = { totalCount: totalCountResult.count, applications: apps };
+      
+      // Cache the result for 5 minutes (300 seconds)
+      await cache.set(cacheKey, result, 300);
+      
+      res.json(result);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch applications" });
     }
@@ -98,6 +113,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = parsed.data;
       const application = await storage.createApplication(validatedData);
+      
+      // Invalidate applications cache for this user
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      
       res.status(201).json(application);
     } catch (error: unknown) {
       console.error("Error creating application:", error);
@@ -126,6 +145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertApplicationSchema.partial().parse(data);
       const application = await storage.updateApplication(id, validatedData);
+      
+      // Invalidate applications cache for this user
+      const userId = getCurrentUserId();
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      
       res.json(application);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -140,6 +164,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteApplication(id);
+      
+      // Invalidate applications cache for this user
+      const userId = getCurrentUserId();
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete application" });
