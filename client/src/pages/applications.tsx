@@ -81,6 +81,9 @@ export default function ApplicationsPage() {
         limit: PAGE_SIZE.toString(),
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(interviewing ? { interviewing: "true" } : {}),
+        ...(stageFilter.length > 0 ? { stages: stageFilter.join(",") } : {}),
+        ...(modeFilter ? { mode: modeFilter } : {}),
+        ...(companyFilter ? { company: companyFilter } : {})
       };
       const queryStr = new URLSearchParams(queryObj).toString();
       const response = await fetch(`/api/applications?${queryStr}`);
@@ -98,7 +101,7 @@ export default function ApplicationsPage() {
       setError(err instanceof Error ? err.message : "Could not fetch applications.");
       toast({
         title: "Error",
-        description: "Failed to load applications. Please try again.",
+        children: "Failed to load applications. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -143,7 +146,7 @@ export default function ApplicationsPage() {
     const updatedApp = updatedApps.find((app) => app.id === application.id)!;
 
     try {
-      // For new applications, only save when both required fields are filled
+      // For new applications, save when both required fields are filled
       if (application.id.startsWith("temp-")) {
         if (updatedApp.companyName.trim() && updatedApp.roleTitle.trim()) {
           const res = await fetch(`/api/applications`, {
@@ -229,13 +232,13 @@ export default function ApplicationsPage() {
       setPendingDelete(null);
       toast({
         title: "Success",
-        description: "Application deleted successfully",
+        children: "Application deleted successfully",
       });
     } catch (err) {
       console.error("Delete failed", err);
       toast({
         title: "Error",
-        description: "Failed to delete application. Please try again.",
+        children: "Failed to delete application. Please try again.",
         variant: "destructive",
       });
     }

@@ -239,11 +239,13 @@ function Row({ index, style, data }: RowProps) {
   }
 
   const handleBlur = async () => {
+    if (!editingField) return;
+    
     setIsEditing(false)
-    setEditingField(null)
     if (editValue !== application[editingField as keyof typeof application]?.toString()) {
-      await data.onEdit(application, editingField!, editValue)
+      await data.onEdit(application, editingField, editValue)
     }
+    setEditingField(null)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -256,9 +258,10 @@ function Row({ index, style, data }: RowProps) {
     }
   }
 
-  const debouncedUpdate = (value: string) => {
+  const handleValueChange = (value: string) => {
+    if (!editingField) return;
     setEditValue(value)
-    data.onEdit(application, editingField!, value)
+    data.onEdit(application, editingField, value)
   }
 
   const getStatusColor = (status: string): string => {
@@ -324,7 +327,7 @@ function Row({ index, style, data }: RowProps) {
               <Input
                 ref={inputRef}
                 value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
+                onChange={(e) => handleValueChange(e.target.value)}
                 onBlur={handleBlur}
                 onKeyDown={handleKeyDown}
                 className="h-7"
@@ -342,10 +345,7 @@ function Row({ index, style, data }: RowProps) {
           {isEditing && editingField === "roleTitle" ? (
             <Select
               value={editValue}
-              onValueChange={(value) => {
-                setEditValue(value);
-                debouncedUpdate("roleTitle", value);
-              }}
+              onValueChange={handleValueChange}
             >
               <SelectTrigger className="h-7">
                 <SelectValue placeholder="Select role" />
@@ -378,7 +378,10 @@ function Row({ index, style, data }: RowProps) {
         <div>
           <select
             value={application.modeOfApplication || ""}
-            onChange={(e) => debouncedUpdate("modeOfApplication", e.target.value)}
+            onChange={(e) => {
+              setEditingField("modeOfApplication");
+              handleValueChange(e.target.value);
+            }}
             className={`w-full px-2 py-1 rounded bg-gray-100 text-xs ${textColor} border border-gray-300 ${!application.modeOfApplication ? "italic text-gray-400" : ""}`}
           >
             <option value="">Empty</option>
@@ -392,7 +395,10 @@ function Row({ index, style, data }: RowProps) {
         {/* Follow-up */}
         <NotionCell
           value={application.followUpDate || ""}
-          onSave={(value: string) => debouncedUpdate("followUpDate", value)}
+          onSave={(value: string) => {
+            setEditingField("followUpDate");
+            handleValueChange(value);
+          }}
           type="date"
           placeholder="Select date"
           className={!application.followUpDate ? "text-gray-400 italic" : textColor}
