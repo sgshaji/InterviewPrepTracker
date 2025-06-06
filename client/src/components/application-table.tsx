@@ -100,14 +100,6 @@ function CompanyLogo({ companyName, size = 'sm' }: { companyName: string; size?:
       'wayfair': 'wayfair.com',
       'miro': 'miro.com',
       'intuit': 'intuit.com',
-      'agoda': 'agoda.com',
-      'lloyds bank': 'lloydsbank.com',
-      'payu': 'payu.com',
-      'wise': 'wise.com',
-      'datadog': 'datadoghq.com',
-      'deel': 'deel.com',
-      'bolt': 'bolt.eu',
-      'arm': 'arm.com',
       'target': 'target.com'
     }
     
@@ -150,9 +142,12 @@ export default function ApplicationTable({
   applications, 
   loading, 
   error,
+  totalCount,
   onEdit, 
   onDelete, 
-  onAddNew
+  onAddNew,
+  onLoadMore,
+  hasMore
 }: ApplicationTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
@@ -407,120 +402,164 @@ export default function ApplicationTable({
         </div>
       </div>
 
-      {/* Applications Table */}
-      <div className="border rounded-lg bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-b border-gray-200">
-              <TableHead className="w-12"></TableHead>
-              <TableHead className="font-semibold">Company</TableHead>
-              <TableHead className="font-semibold">Role</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Stage</TableHead>
-              <TableHead className="font-semibold">Applied</TableHead>
-              <TableHead className="font-semibold">Source</TableHead>
-              <TableHead className="w-12"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading && applications.length === 0 ? (
-              [...Array(5)].map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-32 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-40 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-6 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-6 bg-gray-200 rounded w-24 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
-                  <TableCell><div className="h-4 bg-gray-200 rounded w-16 animate-pulse" /></TableCell>
-                  <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
-                </TableRow>
-              ))
-            ) : filteredApplications.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-12">
-                  <div className="text-gray-500">
-                    {searchTerm || statusFilter.length > 0
-                      ? "No applications match your filters"
-                      : "No applications yet. Add your first one!"}
-                  </div>
-                </TableCell>
+      {/* Applications Table with Scrolling */}
+      <div className="border rounded-lg bg-white overflow-hidden">
+        <div className="max-h-[600px] overflow-y-auto">
+          <Table>
+            <TableHeader className="sticky top-0 bg-white z-10">
+              <TableRow className="border-b border-gray-200">
+                <TableHead className="w-12"></TableHead>
+                <TableHead className="font-semibold">Company</TableHead>
+                <TableHead className="font-semibold">Role</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="font-semibold">Stage</TableHead>
+                <TableHead className="font-semibold">Applied</TableHead>
+                <TableHead className="font-semibold">Source</TableHead>
+                <TableHead className="w-12"></TableHead>
               </TableRow>
-            ) : (
-              filteredApplications.map((application) => (
-                <TableRow key={application.id} className="hover:bg-gray-50">
-                  <TableCell>
-                    <CompanyLogo companyName={application.companyName || ''} />
-                  </TableCell>
-                  <TableCell>
-                    <NotionCell
-                      value={application.companyName || ''}
-                      onSave={(value) => onEdit(application.id.toString(), 'companyName', value)}
-                      className="font-medium"
-                      placeholder="Company Name"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <NotionCell
-                      value={application.roleTitle || ''}
-                      onSave={(value) => onEdit(application.id.toString(), 'roleTitle', value)}
-                      className="font-medium text-gray-900"
-                      placeholder="Role Title"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`${statusColors[application.jobStatus as keyof typeof statusColors] || statusColors['Applied']} border font-medium`}>
-                      {application.jobStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={`${stageColors[application.applicationStage as keyof typeof stageColors] || stageColors['In Review']} border text-xs`}>
-                      {application.applicationStage}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <Calendar className="w-3 h-3 mr-1" />
-                      {formatDate(application.dateApplied)}
+            </TableHeader>
+            <TableBody>
+              {loading && applications.length === 0 ? (
+                [...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 rounded w-32 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 rounded w-40 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 bg-gray-200 rounded w-24 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 bg-gray-200 rounded w-16 animate-pulse" /></TableCell>
+                    <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filteredApplications.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-12">
+                    <div className="text-gray-500">
+                      {searchTerm || statusFilter.length > 0
+                        ? "No applications match your filters"
+                        : "No applications yet. Add your first one!"}
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-gray-600">
-                    {application.modeOfApplication && (
-                      <div className="flex items-center">
-                        <User className="w-3 h-3 mr-1" />
-                        {application.modeOfApplication}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
-                          <ChevronDown className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {application.roleUrl && (
-                          <DropdownMenuItem onClick={() => window.open(application.roleUrl!, '_blank')}>
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            View Job
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem 
-                          onClick={() => setDeleteId(application.id.toString())}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                filteredApplications.map((application) => (
+                  <TableRow key={application.id} className="hover:bg-gray-50">
+                    <TableCell>
+                      <CompanyLogo companyName={application.companyName || ''} />
+                    </TableCell>
+                    <TableCell>
+                      <NotionCell
+                        value={application.companyName || ''}
+                        onSave={(value) => onEdit(application.id.toString(), 'companyName', value)}
+                        className="font-medium"
+                        placeholder="Company Name"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <NotionCell
+                        value={application.roleTitle || ''}
+                        onSave={(value) => onEdit(application.id.toString(), 'roleTitle', value)}
+                        className="font-medium text-gray-900"
+                        placeholder="Role Title"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Select 
+                        value={application.jobStatus} 
+                        onValueChange={(value) => onEdit(application.id.toString(), 'jobStatus', value)}
+                      >
+                        <SelectTrigger className="w-auto border-none bg-transparent p-0 h-auto">
+                          <Badge className={`${statusColors[application.jobStatus as keyof typeof statusColors] || statusColors['Applied']} border font-medium cursor-pointer hover:opacity-80`}>
+                            {application.jobStatus}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {JOB_STATUSES.map(status => (
+                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select 
+                        value={application.applicationStage} 
+                        onValueChange={(value) => onEdit(application.id.toString(), 'applicationStage', value)}
+                      >
+                        <SelectTrigger className="w-auto border-none bg-transparent p-0 h-auto">
+                          <Badge variant="outline" className={`${stageColors[application.applicationStage as keyof typeof stageColors] || stageColors['In Review']} border text-xs cursor-pointer hover:opacity-80`}>
+                            {application.applicationStage}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {APPLICATION_STAGES.map(stage => (
+                            <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {formatDate(application.dateApplied)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {application.modeOfApplication && (
+                        <div className="flex items-center">
+                          <User className="w-3 h-3 mr-1" />
+                          {application.modeOfApplication}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {application.roleUrl && (
+                            <DropdownMenuItem onClick={() => window.open(application.roleUrl!, '_blank')}>
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              View Job
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={() => setDeleteId(application.id.toString())}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Pagination/Load More */}
+      {hasMore && !loading && (
+        <div className="text-center py-4">
+          <Button 
+            onClick={onLoadMore}
+            variant="outline"
+            className="border-gray-200"
+          >
+            Load More Applications
+          </Button>
+        </div>
+      )}
+
+      {/* Total Count */}
+      <div className="text-center text-sm text-gray-500 py-2">
+        Showing {filteredApplications.length} of {totalCount} applications
       </div>
 
       {/* Delete Confirmation Dialog */}
