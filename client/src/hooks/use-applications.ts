@@ -76,11 +76,14 @@ export function useApplications(): UseApplicationsReturn {
 
       const data = await response.json()
       
-      setApplications(prev => 
-        isLoadMore ? [...prev, ...data.applications] : data.applications
-      )
+      setApplications(prev => {
+        const newApplications = isLoadMore ? [...prev, ...data.applications] : data.applications
+        // Check if we have more data to load
+        const currentTotal = newApplications.length
+        setHasMore(currentTotal < data.totalCount && data.applications.length === PAGE_SIZE)
+        return newApplications
+      })
       setTotalCount(data.totalCount)
-      setHasMore(data.applications.length === PAGE_SIZE)
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load applications'

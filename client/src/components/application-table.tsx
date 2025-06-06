@@ -545,14 +545,21 @@ export default function ApplicationTable({
       </div>
 
       {/* Pagination/Load More */}
-      {hasMore && !loading && (
-        <div className="text-center py-4">
+      {hasMore && (
+        <div className="text-center py-6 border-t border-gray-200">
           <Button 
             onClick={onLoadMore}
-            variant="outline"
-            className="border-gray-200"
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
           >
-            Load More Applications
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Loading...
+              </>
+            ) : (
+              `Load More Applications (${applications.length} of ${totalCount})`
+            )}
           </Button>
         </div>
       )}
