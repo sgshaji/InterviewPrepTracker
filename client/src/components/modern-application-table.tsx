@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback } from 'react'
 import { FixedSizeList as List } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
 import { Search, Plus, Filter, ChevronDown, Trash2, Building2 } from 'lucide-react'
@@ -82,7 +82,7 @@ function TableRow({ index, style, data }: TableRowProps) {
 
   if (!application) return null
 
-  const isNewApplication = application.id.startsWith('temp-')
+  const isNewApplication = typeof application.id === 'string' && application.id.startsWith('temp-')
   const isIncomplete = !application.companyName.trim() || !application.roleTitle.trim()
 
   return (
@@ -109,7 +109,7 @@ function TableRow({ index, style, data }: TableRowProps) {
         </div>
         <NotionCell
           value={application.companyName}
-          onSave={(value) => onEdit(application.id, 'companyName', value)}
+          onSave={(value) => onEdit(String(application.id), 'companyName', value)}
           placeholder="Company name *"
           className={isIncomplete && !application.companyName.trim() ? 'border-red-400' : ''}
         />
@@ -119,7 +119,7 @@ function TableRow({ index, style, data }: TableRowProps) {
       <div className="col-span-2">
         <NotionCell
           value={application.roleTitle}
-          onSave={(value) => onEdit(application.id, 'roleTitle', value)}
+          onSave={(value) => onEdit(String(application.id), 'roleTitle', value)}
           placeholder="Role title *"
           className={isIncomplete && !application.roleTitle.trim() ? 'border-red-400' : ''}
         />
@@ -129,7 +129,7 @@ function TableRow({ index, style, data }: TableRowProps) {
       <div className="col-span-1">
         <NotionCell
           value={application.jobStatus}
-          onSave={(value) => onEdit(application.id, 'jobStatus', value)}
+          onSave={(value) => onEdit(String(application.id), 'jobStatus', value)}
           type="select"
           options={JOB_STATUSES}
           placeholder="Status"
@@ -140,7 +140,7 @@ function TableRow({ index, style, data }: TableRowProps) {
       <div className="col-span-2">
         <NotionCell
           value={application.applicationStage || ''}
-          onSave={(value) => onEdit(application.id, 'applicationStage', value)}
+          onSave={(value) => onEdit(String(application.id), 'applicationStage', value)}
           type="select"
           options={APPLICATION_STAGES}
           placeholder="Application stage"
@@ -151,7 +151,7 @@ function TableRow({ index, style, data }: TableRowProps) {
       <div className="col-span-2">
         <NotionCell
           value={application.modeOfApplication || ''}
-          onSave={(value) => onEdit(application.id, 'modeOfApplication', value)}
+          onSave={(value) => onEdit(String(application.id), 'modeOfApplication', value)}
           type="select"
           options={MODES_OF_APPLICATION}
           placeholder="Application mode"
@@ -162,7 +162,7 @@ function TableRow({ index, style, data }: TableRowProps) {
       <div className="col-span-1">
         <NotionCell
           value={application.dateApplied || ''}
-          onSave={(value) => onEdit(application.id, 'dateApplied', value)}
+          onSave={(value) => onEdit(String(application.id), 'dateApplied', value)}
           type="date"
           placeholder="Date"
         />
@@ -172,7 +172,7 @@ function TableRow({ index, style, data }: TableRowProps) {
       <div className="col-span-1">
         <NotionCell
           value={application.resumeVersion || ''}
-          onSave={(value) => onEdit(application.id, 'resumeVersion', value)}
+          onSave={(value) => onEdit(String(application.id), 'resumeVersion', value)}
           placeholder="Resume v."
         />
       </div>
@@ -202,7 +202,7 @@ function TableRow({ index, style, data }: TableRowProps) {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => {
-                  onDelete(application.id)
+                  onDelete(String(application.id))
                   setDeleteDialogOpen(false)
                 }}
                 className="bg-red-600 hover:bg-red-700"
