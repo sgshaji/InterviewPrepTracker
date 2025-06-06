@@ -23,7 +23,8 @@ interface Application {
 const PAGE_SIZE = 20
 
 function useQuery() {
-  return new URLSearchParams(useLocation().search)
+  const { search } = useLocation();
+  return useMemo(() => new URLSearchParams(search), [search]);
 }
 
 export default function ApplicationsPage() {
@@ -73,27 +74,37 @@ export default function ApplicationsPage() {
 
   const loadApplications = async () => {
     try {
-      setLoading(true)
-      const queryObj: any = {
+      setLoading(true);
+      setError(null);
+      const queryObj: Record<string, string> = {
         page: (page - 1).toString(),
         limit: PAGE_SIZE.toString(),
         ...(debouncedSearch ? { search: debouncedSearch } : {}),
         ...(interviewing ? { interviewing: "true" } : {}),
+      };
+      const queryStr = new URLSearchParams(queryObj).toString();
+      const response = await fetch(`/api/applications?${queryStr}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.statusText}`);
       }
-      const queryStr = new URLSearchParams(queryObj).toString()
-      const response = await fetch(`/api/applications?${queryStr}`)
-      if (!response.ok) throw new Error("Failed to fetch")
-      const data = await response.json()
-      setApplications((prev) => (page === 1 ? data.applications : [...prev, ...data.applications]))
-      setTotalCount(data.totalCount)
-      setHasMore(data.applications.length === PAGE_SIZE)
+      
+      const data = await response.json();
+      setApplications((prev) => (page === 1 ? data.applications : [...prev, ...data.applications]));
+      setTotalCount(data.totalCount);
+      setHasMore(data.applications.length === PAGE_SIZE);
     } catch (err) {
-      console.error("Load failed", err)
-      setError("Could not fetch applications.")
+      console.error("Load failed", err);
+      setError(err instanceof Error ? err.message : "Could not fetch applications.");
+      toast({
+        title: "Error",
+        description: "Failed to load applications. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     setPage(1)
@@ -104,62 +115,81 @@ export default function ApplicationsPage() {
   }, [page, debouncedSearch])
 
   const handleEdit = async (application: Application, field: string, value: string) => {
-    const prevApps = [...applications]
-    const updatedApps = applications.map((app) => (app.id === application.id ? { ...app, [field]: value } : app))
-    setApplications(updatedApps)
+    // Validate required fields
+    if (field === "companyName" && !value.trim()) {
+      toast({
+        title: "Validation Error",
+        children: "Company name is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    const updatedApp = updatedApps.find((app) => app.id === application.id)!
+    if (field === "roleTitle" && !value.trim()) {
+      toast({
+        title: "Validation Error",
+        children: "Role title is required",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    // 🟡 If it's a temp record AND both required fields are filled, persist it
-    if (application.id.startsWith("temp-") && updatedApp.companyName.trim() && updatedApp.roleTitle.trim()) {
-      try {
-        const res = await fetch(`/api/applications`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedApp),
-        })
+    const prevApps = [...applications];
+    const updatedApps = applications.map((app) => 
+      app.id === application.id ? { ...app, [field]: value } : app
+    );
+    setApplications(updatedApps);
 
-        if (!res.ok) throw new Error("Failed to save new application")
+    const updatedApp = updatedApps.find((app) => app.id === application.id)!;
 
-        const dbApp = await res.json()
+    try {
+      // For new applications, only save when both required fields are filled
+      if (application.id.startsWith("temp-")) {
+        if (updatedApp.companyName.trim() && updatedApp.roleTitle.trim()) {
+          const res = await fetch(`/api/applications`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedApp),
+          });
 
-        // 🔄 Replace temp ID with real DB ID
-        setApplications((prev) => prev.map((app) => (app.id === application.id ? { ...dbApp } : app)))
+          if (!res.ok) {
+            throw new Error("Failed to save new application");
+          }
 
-        toast({ title: "Saved", description: "Application added to database." })
-      } catch (err) {
-        setApplications(prevApps)
-        toast({
-          title: "Error",
-          description: "Failed to save new application.",
-          variant: "destructive",
-        })
-      }
-    } else if (!application.id.startsWith("temp-")) {
-      // 🟢 Regular update path (already covered earlier)
-      try {
+          const dbApp = await res.json();
+          setApplications((prev) => prev.map((app) => (app.id === application.id ? { ...dbApp } : app)));
+          toast({
+            title: "Success",
+            children: "Application added successfully",
+          });
+        }
+      } else {
+        // For existing applications, update immediately
         const response = await fetch(`/api/applications/${application.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ [field]: value }),
-        })
+        });
 
-        if (!response.ok) throw new Error("Update failed")
+        if (!response.ok) {
+          throw new Error("Update failed");
+        }
 
         toast({
-          title: "Saved",
-          description: `${field} updated successfully`,
-        })
-      } catch (err) {
-        setApplications(prevApps)
-        toast({
-          title: "Error",
-          description: "Failed to save change. Rolled back.",
-          variant: "destructive",
-        })
+          title: "Success",
+          children: `${field} updated successfully`,
+        });
       }
+    } catch (err) {
+      console.error("Save failed", err);
+      setApplications(prevApps);
+      toast({
+        title: "Error",
+        children: err instanceof Error ? err.message : "Failed to save changes",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const handleAddNew = () => {
     const today = new Date().toISOString().split("T")[0]
@@ -185,9 +215,31 @@ export default function ApplicationsPage() {
     if (!loading && hasMore) setPage((p) => p + 1)
   }
 
-  const handleDelete = (application: Application) => {
-    setPendingDelete(application)
-  }
+  const handleDelete = async (application: Application) => {
+    try {
+      const response = await fetch(`/api/applications/${application.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete application");
+      }
+
+      setApplications((prev) => prev.filter((app) => app.id !== application.id));
+      setPendingDelete(null);
+      toast({
+        title: "Success",
+        description: "Application deleted successfully",
+      });
+    } catch (err) {
+      console.error("Delete failed", err);
+      toast({
+        title: "Error",
+        description: "Failed to delete application. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#0A0D14]">
@@ -267,31 +319,14 @@ export default function ApplicationsPage() {
                 Cancel
               </button>
               <button
-                onClick={async () => {
-                  const app = pendingDelete
-                  setPendingDelete(null)
-                  if (!app || typeof app.id === "undefined") return
-                  // 🟡 Temp entries: delete locally
-                  if (String(app.id).startsWith("temp-")) {
-                    setApplications((prev) => prev.filter((a) => a.id !== app.id))
-                    toast({ title: "Draft removed." })
-                    return
-                  }
-                  // 🔵 DB entries
-                  try {
-                    const res = await fetch(`/api/applications/${app.id}`, {
-                      method: "DELETE",
-                    })
-                    if (!res.ok) throw new Error("Delete failed")
-                    setApplications((prev) => prev.filter((a) => a.id !== app.id))
-                    toast({ title: "Deleted", description: "Application removed." })
-                  } catch (err) {
-                    toast({ title: "Error", description: "Could not delete.", variant: "destructive" })
+                onClick={() => {
+                  if (pendingDelete) {
+                    handleDelete(pendingDelete);
                   }
                 }}
                 className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-500"
               >
-                Yes, Delete
+                Delete
               </button>
             </div>
           </div>

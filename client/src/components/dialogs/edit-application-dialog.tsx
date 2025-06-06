@@ -7,9 +7,21 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { updateApplication } from "@/api/applications/updateApplication";
 import { api } from "@/utils/api";
+import { z } from "zod";
+
+// Validation schema
+const applicationSchema = z.object({
+  companyName: z.string().min(1, "Company name is required"),
+  roleTitle: z.string().min(1, "Role title is required"),
+  jobStatus: z.string().min(1, "Job status is required"),
+  applicationStage: z.string().optional(),
+  resumeVersion: z.string().optional(),
+  modeOfApplication: z.string().optional(),
+  dateApplied: z.string().optional(),
+});
 
 interface Application {
-  id: string;
+  id: number;
   companyName: string;
   roleTitle: string;
   jobStatus: string;
@@ -23,48 +35,89 @@ interface EditApplicationDialogProps {
   open: boolean;
   onClose: () => void;
   application: Application | null;
+  onSuccess?: (updatedApp: Application) => void;
 }
 
 export const EditApplicationDialog: React.FC<EditApplicationDialogProps> = ({
   open,
   onClose,
   application,
+  onSuccess,
 }) => {
   const [formData, setFormData] = useState<Application | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   useEffect(() => {
     if (application) {
       setFormData(application);
+      setErrors({});
     }
   }, [application]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
+    // Clear error when field is modified
+    setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  const validateForm = (): boolean => {
+    if (!formData) return false;
+    try {
+      applicationSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0].toString()] = err.message;
+          }
+        });
+        setErrors(newErrors);
+      }
+      return false;
+    }
   };
 
   const handleSubmit = async () => {
     if (!formData) return;
-    setIsSaving(true);
-    const { error } = await updateApplication(formData);
-    if (error) {
+    
+    if (!validateForm()) {
       toast({
-        title: `Update Failed: ${error}`,
+        title: "Validation Error",
+        children: "Please fix the errors in the form",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Application Saved ✅ Changes applied successfully.",
-      });
-      onClose();
+      return;
     }
-    setIsSaving(false);
-  };
 
-  const isInvalid =
-    !formData?.companyName?.trim() || !formData?.roleTitle?.trim() || !formData?.jobStatus?.trim();
+    setIsSaving(true);
+    try {
+      const { error } = await updateApplication(formData);
+      if (error) {
+        throw new Error(error);
+      }
+      
+      toast({
+        title: "Success",
+        children: "Application updated successfully",
+      });
+      onSuccess?.(formData);
+      onClose();
+    } catch (err) {
+      toast({
+        title: "Error",
+        children: err instanceof Error ? err.message : "Failed to update application",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (!formData) return null;
 
@@ -82,7 +135,11 @@ export const EditApplicationDialog: React.FC<EditApplicationDialogProps> = ({
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
+                className={errors.companyName ? "border-red-500" : ""}
               />
+              {errors.companyName && (
+                <p className="text-sm text-red-500 mt-1">{errors.companyName}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="roleTitle">Role</Label>
@@ -91,7 +148,11 @@ export const EditApplicationDialog: React.FC<EditApplicationDialogProps> = ({
                 name="roleTitle"
                 value={formData.roleTitle}
                 onChange={handleChange}
+                className={errors.roleTitle ? "border-red-500" : ""}
               />
+              {errors.roleTitle && (
+                <p className="text-sm text-red-500 mt-1">{errors.roleTitle}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="jobStatus">Status</Label>
@@ -100,7 +161,11 @@ export const EditApplicationDialog: React.FC<EditApplicationDialogProps> = ({
                 name="jobStatus"
                 value={formData.jobStatus}
                 onChange={handleChange}
+                className={errors.jobStatus ? "border-red-500" : ""}
               />
+              {errors.jobStatus && (
+                <p className="text-sm text-red-500 mt-1">{errors.jobStatus}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="applicationStage">Stage</Label>
@@ -144,7 +209,10 @@ export const EditApplicationDialog: React.FC<EditApplicationDialogProps> = ({
             <Button variant="outline" onClick={onClose} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={isInvalid || isSaving}>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSaving || Object.keys(errors).length > 0}
+            >
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

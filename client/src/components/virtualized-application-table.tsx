@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import { FixedSizeList as List } from "react-window"
+import React, { useEffect, useRef, useState } from "react"
+import { FixedSizeList as List, ListChildComponentProps } from "react-window"
 import AutoSizer from "react-virtualized-auto-sizer"
 import { ChevronDown, Circle, Check, Trash2 } from "lucide-react"
 import { Button } from "./ui/button"
@@ -9,6 +9,9 @@ import { format } from "date-fns"
 import { Badge } from "./ui/badge"
 import NotionCell from "./notion-cell"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { MODES_OF_APPLICATION } from "@/lib/constants"
 
 function formatDate(date?: string) {
   if (!date) return ""
@@ -64,6 +67,31 @@ const roleTitles = [
   "VP of Product",
   "Chief Product Officer",
 ]
+
+// Add common role titles
+const ROLE_TITLES = [
+  "Software Engineer",
+  "Senior Software Engineer",
+  "Software Developer",
+  "Full Stack Developer",
+  "Frontend Developer",
+  "Backend Developer",
+  "DevOps Engineer",
+  "Site Reliability Engineer",
+  "Software Architect",
+  "Engineering Manager",
+  "Technical Lead",
+  "Product Manager",
+  "Data Scientist",
+  "Machine Learning Engineer",
+  "Data Engineer",
+  "QA Engineer",
+  "Test Engineer",
+  "Security Engineer",
+  "Cloud Engineer",
+  "Mobile Developer",
+  "Other"
+] as const;
 
 const Dropdown = ({
   options,
@@ -185,22 +213,52 @@ const TableHeader = ({
   </div>
 )
 
-const Row = ({
-  index,
-  style,
-  data,
-}: {
-  index: number
-  style: React.CSSProperties
-  data: {
-    applications: Application[]
-    onEdit: (application: Application, field: string, value: string) => void
-    onDelete?: (application: Application) => void
-  }
-}) => {
+interface RowProps extends ListChildComponentProps<{
+  applications: Application[]
+  onEdit: (application: Application, field: string, value: string) => void
+  onDelete?: (application: Application) => void
+}> {}
+
+function Row({ index, style, data }: RowProps) {
   const application = data.applications[index]
-  const debouncedUpdate = (field: string, value: string) => {
-    data.onEdit(application, field, value)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editValue, setEditValue] = useState("")
+  const [editingField, setEditingField] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isEditing])
+
+  const handleClick = (field: string) => {
+    setIsEditing(true)
+    setEditingField(field)
+    setEditValue(application[field as keyof typeof application]?.toString() || "")
+  }
+
+  const handleBlur = async () => {
+    setIsEditing(false)
+    setEditingField(null)
+    if (editValue !== application[editingField as keyof typeof application]?.toString()) {
+      await data.onEdit(application, editingField!, editValue)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleBlur()
+    } else if (e.key === "Escape") {
+      setIsEditing(false)
+      setEditingField(null)
+      setEditValue(application[editingField as keyof typeof application]?.toString() || "")
+    }
+  }
+
+  const debouncedUpdate = (value: string) => {
+    setEditValue(value)
+    data.onEdit(application, editingField!, value)
   }
 
   const getStatusColor = (status: string): string => {
@@ -258,20 +316,52 @@ const Row = ({
               {application.companyName?.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <NotionCell
-            value={application.companyName || ""}
-            onSave={(value: string) => debouncedUpdate("companyName", value)}
-            className={`font-medium ${!application.companyName ? "text-muted-foreground italic" : textColor}`}
-            placeholder="Empty"
-          />
+          <div
+            className="flex-1 cursor-pointer hover:text-primary"
+            onClick={() => handleClick("companyName")}
+          >
+            {isEditing && editingField === "companyName" ? (
+              <Input
+                ref={inputRef}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                className="h-7"
+              />
+            ) : (
+              application.companyName
+            )}
+          </div>
         </div>
         {/* Position */}
-        <NotionCell
-          value={application.roleTitle || ""}
-          onSave={(value: string) => debouncedUpdate("roleTitle", value)}
-          className={!application.roleTitle ? "text-gray-400 italic" : textColor}
-          placeholder="Empty"
-        />
+        <div
+          className="cursor-pointer hover:text-primary"
+          onClick={() => handleClick("roleTitle")}
+        >
+          {isEditing && editingField === "roleTitle" ? (
+            <Select
+              value={editValue}
+              onValueChange={(value) => {
+                setEditValue(value);
+                debouncedUpdate("roleTitle", value);
+              }}
+            >
+              <SelectTrigger className="h-7">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLE_TITLES.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            application.roleTitle
+          )}
+        </div>
         {/* Status */}
         <div>
           <Badge variant="outline" className={`font-medium ${getStatusColor(application.jobStatus)}`}>

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Briefcase, ArrowRight, Eye, EyeOff } from "lucide-react";
-import { Link, Redirect } from "wouter";
+import { Link, Navigate } from "react-router-dom";
 
 export default function LoginPage() {
   const { user, loginMutation } = useAuth();
@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   // Redirect if already logged in
   if (user) {
-    return <Redirect to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -107,7 +107,7 @@ export default function LoginPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Don't have an account?{" "}
-                <Link href="/register" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">
                   Create Account
                 </Link>
               </p>

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Briefcase, TrendingUp, Users, BarChart3 } from "lucide-react";
-import { Redirect } from "wouter";
+import { Navigate } from "react-router-dom";
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -15,7 +15,7 @@ export default function AuthPage() {
 
   // Redirect if already logged in
   if (user) {
-    return <Redirect to="/" />;
+    return <Navigate to="/" replace />;
   }
 
   const handleLogin = (e: React.FormEvent) => {
@@ -32,6 +32,10 @@ export default function AuthPage() {
     registerMutation.mutate({
       username: registerData.username,
       password: registerData.password,
+      email: registerData.username,
+      name: registerData.username,
+      role: "user",
+      subscriptionStatus: "inactive"
     });
   };
 
