@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from './use-toast'
 
 export interface Application {
-  id: string
+  id: number | string  // number for DB records, string for temp records
   companyName: string
   companyLogo?: string
   roleTitle: string
@@ -124,14 +124,17 @@ export function useApplications(): UseApplicationsReturn {
   }, [])
 
   const updateApplication = useCallback(async (id: string, field: string, value: string) => {
+    // Convert string ID back to proper type for comparison
+    const actualId = id.startsWith('temp-') ? id : parseInt(id)
+    
     // Optimistic update
     const prevApplications = [...applications]
     setApplications(prev => 
-      prev.map(app => app.id === id ? { ...app, [field]: value } : app)
+      prev.map(app => app.id === actualId ? { ...app, [field]: value } : app)
     )
 
     try {
-      const application = applications.find(app => app.id === id)
+      const application = applications.find(app => app.id === actualId)
       if (!application) throw new Error('Application not found')
 
       // Validation
@@ -146,7 +149,7 @@ export function useApplications(): UseApplicationsReturn {
       
       if (id.startsWith('temp-')) {
         // New application - check if both required fields are filled
-        const updatedApp = prevApplications.find(app => app.id === id)
+        const updatedApp = applications.find(app => app.id === actualId)
         if (updatedApp && updatedApp.companyName.trim() && updatedApp.roleTitle.trim()) {
           response = await fetch('/api/applications', {
             method: 'POST',
@@ -157,7 +160,7 @@ export function useApplications(): UseApplicationsReturn {
           if (response.ok) {
             const dbApp = await response.json()
             setApplications(prev => 
-              prev.map(app => app.id === id ? dbApp : app)
+              prev.map(app => app.id === actualId ? dbApp : app)
             )
             toast({
               title: 'Success',
@@ -197,8 +200,10 @@ export function useApplications(): UseApplicationsReturn {
   }, [applications])
 
   const deleteApplication = useCallback(async (id: string) => {
+    const actualId = id.startsWith('temp-') ? id : parseInt(id)
+    
     if (id.startsWith('temp-')) {
-      setApplications(prev => prev.filter(app => app.id !== id))
+      setApplications(prev => prev.filter(app => app.id !== actualId))
       return
     }
 
@@ -211,7 +216,7 @@ export function useApplications(): UseApplicationsReturn {
         throw new Error('Failed to delete application')
       }
 
-      setApplications(prev => prev.filter(app => app.id !== id))
+      setApplications(prev => prev.filter(app => app.id !== actualId))
       toast({
         title: 'Success',
         description: 'Application deleted successfully'
