@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Search, Plus, Filter, ChevronDown, Trash2, ExternalLink, Calendar, User } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -149,6 +149,7 @@ export default function ApplicationTable({
   onLoadMore,
   hasMore
 }: ApplicationTableProps) {
+  const tableContainerRef = useRef<HTMLDivElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -163,6 +164,27 @@ export default function ApplicationTable({
     modeOfApplication: 'LinkedIn' as const,
     resumeVersion: ''
   })
+
+  // Infinite scroll functionality
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!tableContainerRef.current || loading || !hasMore) return
+      
+      const container = tableContainerRef.current
+      const { scrollTop, scrollHeight, clientHeight } = container
+      
+      // Load more when scrolled to 80% of the container
+      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+        onLoadMore()
+      }
+    }
+
+    const container = tableContainerRef.current
+    if (container) {
+      container.addEventListener('scroll', handleScroll)
+      return () => container.removeEventListener('scroll', handleScroll)
+    }
+  }, [loading, hasMore, onLoadMore])
 
   const filteredApplications = useMemo(() => {
     return applications.filter(app => {
@@ -404,7 +426,7 @@ export default function ApplicationTable({
 
       {/* Applications Table with Scrolling */}
       <div className="border rounded-lg bg-white overflow-hidden">
-        <div className="max-h-[600px] overflow-y-auto">
+        <div ref={tableContainerRef} className="max-h-[600px] overflow-y-auto">
           <Table>
             <TableHeader className="sticky top-0 bg-white z-10">
               <TableRow className="border-b border-gray-200">
@@ -544,23 +566,13 @@ export default function ApplicationTable({
         </div>
       </div>
 
-      {/* Pagination/Load More */}
-      {hasMore && (
-        <div className="text-center py-6 border-t border-gray-200">
-          <Button 
-            onClick={onLoadMore}
-            disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Loading...
-              </>
-            ) : (
-              `Load More Applications (${applications.length} of ${totalCount})`
-            )}
-          </Button>
+      {/* Loading indicator for infinite scroll */}
+      {loading && applications.length > 0 && (
+        <div className="text-center py-4 border-t border-gray-200">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <span className="text-sm text-gray-600">Loading more applications...</span>
+          </div>
         </div>
       )}
 
