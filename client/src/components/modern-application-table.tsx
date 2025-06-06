@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { FixedSizeList as List } from 'react-window'
 import AutoSizer from 'react-virtualized-auto-sizer'
 import { Search, Plus, Filter, ChevronDown, Trash2, Building2 } from 'lucide-react'
+import { getCompanyLogo, getCompanyInitials } from '../lib/company-logos'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -25,7 +26,7 @@ import {
 } from './ui/alert-dialog'
 import NotionCell from './notion-cell'
 import { Application } from '../hooks/use-applications'
-import { MODES_OF_APPLICATION } from '../lib/constants'
+import { MODES_OF_APPLICATION, ROLE_TITLES } from '../lib/constants'
 
 interface ModernApplicationTableProps {
   applications: Application[]
@@ -96,12 +97,20 @@ function TableRow({ index, style, data }: TableRowProps) {
     >
       {/* Company */}
       <div className="col-span-2 flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-          {application.companyLogo ? (
+        <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+          {application.companyName ? (
             <img 
-              src={application.companyLogo} 
+              src={getCompanyLogo(application.companyName) || ''}
               alt={`${application.companyName} logo`}
-              className="w-6 h-6 rounded"
+              className="w-8 h-8 rounded-lg object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  parent.innerHTML = `<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">${getCompanyInitials(application.companyName)}</div>`;
+                }
+              }}
             />
           ) : (
             <Building2 className="w-4 h-4 text-muted-foreground" />
