@@ -1,446 +1,545 @@
-import { useState, useMemo, useCallback } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Building, Plus, Trash2 } from "lucide-react";
-import { Application } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { JOB_STATUSES, APPLICATION_STAGES, MODES_OF_APPLICATION, ROLE_TITLES } from "@/lib/constants";
-import NotionCell from "@/components/notion-cell";
+import { useState, useMemo } from 'react'
+import { Search, Plus, Filter, ChevronDown, Trash2, ExternalLink, Calendar, User } from 'lucide-react'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Badge } from './ui/badge'
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator
+} from './ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './ui/alert-dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
+import { Label } from './ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
+import NotionCell from './notion-cell'
+import { JOB_STATUSES, APPLICATION_STAGES, ROLE_TITLES, MODES_OF_APPLICATION } from '../lib/constants'
+import type { Application } from '@shared/schema'
 
 interface ApplicationTableProps {
-  applications: Application[];
-  isLoading: boolean;
+  applications: Application[]
+  loading: boolean
+  error: string | null
+  totalCount: number
+  filters: any
+  onFiltersChange: (filters: any) => void
+  onEdit: (id: string, field: string, value: string) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onAddNew: (data: any) => Promise<void>
+  onLoadMore: () => void
+  hasMore: boolean
 }
 
-export default function ApplicationTable({ applications, isLoading }: ApplicationTableProps) {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+const statusColors = {
+  'Applied': 'bg-blue-500/10 text-blue-700 border-blue-200',
+  'In Progress': 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
+  'Interview': 'bg-purple-500/10 text-purple-700 border-purple-200',
+  'Rejected': 'bg-red-500/10 text-red-700 border-red-200',
+  'Offer': 'bg-green-500/10 text-green-700 border-green-200'
+}
 
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Application> }) => {
-      return await apiRequest<Application>("PUT", `/api/applications/${id}`, data);
-    },
-    onSuccess: (updatedApplication) => {
-      queryClient.setQueryData<{ pages: { totalCount: number; applications: Application[] }[] }>(
-        ["/api/applications"],
-        (oldData) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page) => ({
-              ...page,
-              applications: page.applications.map((app) =>
-                app.id === updatedApplication.id ? { ...app, ...updatedApplication } : app
-              ),
-            })),
-          };
-        }
-      );
-    },
-    onError: () => {
-      toast({ title: "Failed to update application", variant: "destructive" });
-    },
-  });
+const stageColors = {
+  'No Callback': 'bg-gray-500/10 text-gray-700 border-gray-200',
+  'In Review': 'bg-blue-500/10 text-blue-700 border-blue-200',
+  'HR Round': 'bg-yellow-500/10 text-yellow-700 border-yellow-200',
+  'Hiring Manager Round': 'bg-orange-500/10 text-orange-700 border-orange-200',
+  'Case Study/Assignment': 'bg-purple-500/10 text-purple-700 border-purple-200',
+  'Panel Interview': 'bg-indigo-500/10 text-indigo-700 border-indigo-200',
+  'Final Round': 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+  'Offer': 'bg-green-500/10 text-green-700 border-green-200'
+}
 
-  const createMutation = useMutation({
-    mutationFn: async (data: Partial<Application>) => {
-      return await apiRequest<Application>("POST", "/api/applications", {
-        ...data,
-        dateApplied: data.dateApplied || new Date().toISOString().split('T')[0],
-        jobStatus: data.jobStatus || "Applied",
-        applicationStage: data.applicationStage || "In Review"
-      });
-    },
-    onSuccess: (newApplication) => {
-      queryClient.setQueryData<{ pages: { totalCount: number; applications: Application[] }[] }>(
-        ["/api/applications"],
-        (oldData) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page, index) => {
-              if (index === 0) {
-                return {
-                  ...page,
-                  totalCount: page.totalCount + 1,
-                  applications: [newApplication, ...page.applications],
-                };
-              }
-              return page;
-            }),
-          };
-        }
-      );
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-    },
-    onError: () => {
-      toast({ title: "Failed to create application", variant: "destructive" });
-    },
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/applications/${id}`);
-      return id;
-    },
-    onSuccess: (deletedId) => {
-      queryClient.setQueryData<{ pages: { totalCount: number; applications: Application[] }[] }>(
-        ["/api/applications"],
-        (oldData) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page) => ({
-              ...page,
-              totalCount: page.totalCount - 1,
-              applications: page.applications.filter((app) => app.id !== deletedId),
-            })),
-          };
-        }
-      );
-      toast({ title: "Application deleted successfully" });
-    },
-    onError: () => {
-      toast({ title: "Failed to delete application", variant: "destructive" });
-    },
-  });
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, string> = {
-      "Applied": "bg-blue-100 text-blue-700 border border-blue-200 shadow-sm",
-      "In Progress": "bg-amber-100 text-amber-700 border border-amber-200 shadow-sm animate-pulse",
-      "Rejected": "bg-red-100 text-red-700 border border-red-200 shadow-sm",
-      "Offer": "bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm ring-2 ring-emerald-200"
-    };
-    return variants[status] || "bg-slate-100 text-slate-700 border border-slate-200";
-  };
-
-  const getStageBadge = (stage: string, status: string) => {
-    // If status is rejected, always use red regardless of stage
-    if (status === "Rejected") {
-      return "bg-red-100 text-red-700 border border-red-200";
+// Direct Clearbit logo component
+function CompanyLogo({ companyName, size = 'sm' }: { companyName: string; size?: 'sm' | 'md' }) {
+  const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10'
+  
+  const getDomain = (name: string) => {
+    const cleanName = name.toLowerCase().trim()
+    const domainMap: Record<string, string> = {
+      'google': 'google.com',
+      'microsoft': 'microsoft.com',
+      'apple': 'apple.com',
+      'amazon': 'amazon.com',
+      'meta': 'meta.com',
+      'facebook': 'meta.com',
+      'netflix': 'netflix.com',
+      'uber': 'uber.com',
+      'airbnb': 'airbnb.com',
+      'spotify': 'spotify.com',
+      'linkedin': 'linkedin.com',
+      'twitter': 'x.com',
+      'tesla': 'tesla.com',
+      'salesforce': 'salesforce.com',
+      'adobe': 'adobe.com',
+      'oracle': 'oracle.com',
+      'ibm': 'ibm.com',
+      'intel': 'intel.com',
+      'nvidia': 'nvidia.com',
+      'paypal': 'paypal.com',
+      'stripe': 'stripe.com',
+      'shopify': 'shopify.com',
+      'zoom': 'zoom.us',
+      'slack': 'slack.com',
+      'dropbox': 'dropbox.com',
+      'atlassian': 'atlassian.com',
+      'figma': 'figma.com',
+      'notion': 'notion.so',
+      'wayfair': 'wayfair.com',
+      'miro': 'miro.com',
+      'intuit': 'intuit.com',
+      'agoda': 'agoda.com',
+      'lloyds bank': 'lloydsbank.com',
+      'payu': 'payu.com',
+      'wise': 'wise.com',
+      'datadog': 'datadoghq.com',
+      'deel': 'deel.com',
+      'bolt': 'bolt.eu',
+      'arm': 'arm.com',
+      'target': 'target.com'
     }
     
-    // If status is offer, always use green regardless of stage
-    if (status === "Offer") {
-      return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+    if (domainMap[cleanName]) return domainMap[cleanName]
+    
+    for (const [key, domain] of Object.entries(domainMap)) {
+      if (cleanName.includes(key) || key.includes(cleanName)) {
+        return domain
+      }
     }
     
-    // Progressive color coding based on interview stage advancement
-    const stageColors: Record<string, string> = {
-      "No Callback": "bg-gray-100 text-gray-600 border border-gray-200",
-      "In Review": "bg-blue-50 text-blue-600 border border-blue-200",
-      "HR Round": "bg-cyan-100 text-cyan-700 border border-cyan-200",
-      "Hiring Manager Round": "bg-purple-100 text-purple-700 border border-purple-200",
-      "Case Study/Assignment": "bg-orange-100 text-orange-700 border border-orange-200",
-      "Panel Interview": "bg-indigo-100 text-indigo-700 border border-indigo-200",
-      "Final Round": "bg-amber-100 text-amber-700 border border-amber-200",
-      "Offer": "bg-emerald-100 text-emerald-700 border border-emerald-200"
-    };
-    
-    return stageColors[stage] || "bg-slate-100 text-slate-700 border border-slate-200";
-  };
+    return `${cleanName.replace(/[^a-z0-9]/g, '')}.com`
+  }
 
-  // Memoize expensive operations for better performance
-  const handleCellUpdate = useCallback((id: number, field: keyof Application, value: string) => {
-    updateMutation.mutate({ id, data: { [field]: value } });
-  }, [updateMutation]);
+  const domain = getDomain(companyName)
+  const clearbitUrl = `https://logo.clearbit.com/${domain}`
+  const initials = companyName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
+  
+  return (
+    <div className={`${sizeClass} rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center`}>
+      <img
+        src={clearbitUrl}
+        alt={`${companyName} logo`}
+        className={`${sizeClass} object-contain`}
+        onError={(e) => {
+          const target = e.target as HTMLImageElement
+          target.style.display = 'none'
+          const parent = target.parentElement
+          if (parent) {
+            parent.innerHTML = `<div class="text-xs font-semibold text-gray-600">${initials}</div>`
+            parent.className = `${sizeClass} rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white`
+          }
+        }}
+      />
+    </div>
+  )
+}
 
-  // Memoize date formatting
-  const formatDate = useCallback((dateString: string) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = date.toLocaleDateString('en-US', { month: 'short' });
-    const year = date.getFullYear().toString().slice(-2);
-    return `${day} ${month} ${year}`;
-  }, []);
+export default function ApplicationTable({ 
+  applications, 
+  loading, 
+  error,
+  onEdit, 
+  onDelete, 
+  onAddNew
+}: ApplicationTableProps) {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string[]>([])
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [newApplication, setNewApplication] = useState({
+    companyName: '',
+    roleTitle: '',
+    jobStatus: 'Applied' as const,
+    applicationStage: 'In Review' as const,
+    dateApplied: new Date().toISOString().split('T')[0],
+    roleUrl: '',
+    modeOfApplication: 'LinkedIn' as const,
+    resumeVersion: ''
+  })
 
-  const handleAddNew = useCallback(() => {
-    createMutation.mutate({
-      companyName: "",
-      roleTitle: "Senior Product Manager",
-      modeOfApplication: "Company Site"
-    });
-  }, [createMutation]);
-
-  // Memoize sorted applications to prevent unnecessary re-sorting
-  const sortedApplications = useMemo(() => {
-    return [...applications].sort((a, b) => {
-      const aIsRejected = a.jobStatus === "Rejected";
-      const bIsRejected = b.jobStatus === "Rejected";
+  const filteredApplications = useMemo(() => {
+    return applications.filter(app => {
+      const matchesSearch = !searchTerm || 
+        app.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        app.roleTitle?.toLowerCase().includes(searchTerm.toLowerCase())
       
-      // If one is rejected and other isn't, non-rejected comes first
-      if (aIsRejected && !bIsRejected) return 1;
-      if (!aIsRejected && bIsRejected) return -1;
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(app.jobStatus)
       
-      // Both are same status, sort by date descending (newest first)
-      return new Date(b.dateApplied).getTime() - new Date(a.dateApplied).getTime();
-    });
-  }, [applications]);
+      return matchesSearch && matchesStatus
+    })
+  }, [applications, searchTerm, statusFilter])
 
-  // Memoize helper functions for better performance
-  const isDateInPast = useCallback((dateString: string) => {
-    if (!dateString) return false;
-    const date = new Date(dateString);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return date < today;
-  }, []);
+  const handleDelete = async () => {
+    if (deleteId) {
+      await onDelete(deleteId)
+      setDeleteId(null)
+    }
+  }
 
-  const shouldDisableFollowUp = useCallback((application: Application) => {
-    return application.jobStatus === "Rejected" || isDateInPast(application.followUpDate || "");
-  }, [isDateInPast]);
+  const handleCreate = async () => {
+    if (newApplication.companyName && newApplication.roleTitle) {
+      await onAddNew(newApplication)
+      setNewApplication({
+        companyName: '',
+        roleTitle: '',
+        jobStatus: 'Applied',
+        applicationStage: 'In Review',
+        dateApplied: new Date().toISOString().split('T')[0],
+        roleUrl: '',
+        modeOfApplication: 'LinkedIn',
+        resumeVersion: ''
+      })
+      setIsAddDialogOpen(false)
+    }
+  }
 
-  // Function to get company logo from Clearbit API (reliable company logos)
-  const getCompanyLogo = (companyName: string) => {
-    if (!companyName) return null;
-    const domain = getCompanyDomain(companyName);
-    return `https://logo.clearbit.com/${domain}`;
-  };
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
 
-  // Helper to map company names to their domains
-  const getCompanyDomain = (companyName: string) => {
-    const domainMap: { [key: string]: string } = {
-      'Meta': 'meta.com',
-      'Microsoft': 'microsoft.com',
-      'Apple': 'apple.com',
-      'Google': 'google.com',
-      'Amazon': 'amazon.com',
-      'Netflix': 'netflix.com',
-      'Spotify': 'spotify.com',
-      'Adobe': 'adobe.com'
-    };
-    
-    return domainMap[companyName] || `${companyName.toLowerCase().replace(/\s+/g, '')}.com`;
-  };
-
-  if (isLoading) {
+  if (error) {
     return (
-      <Card className="border-slate-200 shadow-sm">
-        <div className="p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-12 bg-slate-200 rounded"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
+      <div className="text-center py-12">
+        <div className="text-red-500 mb-4">Error loading applications</div>
+        <p className="text-gray-500">{error}</p>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-slate-50 rounded-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-6 py-4">
-          <h3 className="text-white font-semibold text-lg">Application Tracker</h3>
-          <p className="text-slate-300 text-sm mt-1">Click any cell to edit • {applications.length} total applications</p>
+      {/* Header with Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search applications..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 bg-white border-gray-200"
+          />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-slate-100 to-slate-50 border-b-2 border-slate-200">
-              <tr>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[100px]">
+        
+        <div className="flex gap-2">
+          {/* Status Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-gray-200">
+                <Filter className="w-4 h-4 mr-2" />
+                Status
+                {statusFilter.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">
+                    {statusFilter.length}
+                  </Badge>
+                )}
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {JOB_STATUSES.map(status => (
+                <DropdownMenuCheckboxItem
+                  key={status}
+                  checked={statusFilter.includes(status)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setStatusFilter([...statusFilter, status])
+                    } else {
+                      setStatusFilter(statusFilter.filter(s => s !== status))
+                    }
+                  }}
+                >
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span>Date</span>
+                    <div className={`w-2 h-2 rounded-full ${statusColors[status as keyof typeof statusColors]?.split(' ')[0] || 'bg-gray-500'}`} />
+                    <span>{status}</span>
                   </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[160px]">
-                  <div className="flex items-center space-x-2">
-                    <Building className="w-3 h-3 text-slate-500" />
-                    <span>Company</span>
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[140px]">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span>Role</span>
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[100px]">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
-                    <span>Status</span>
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[120px]">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <span>Stage</span>
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[100px]">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-cyan-500 rounded-full"></div>
-                    <span>Resume</span>
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider min-w-[110px]">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                    <span>Applied Via</span>
-                  </div>
-                </th>
-                <th className="px-3 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-[50px]"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 bg-white">
-              {/* Add new row at the top */}
-              <tr className="hover:bg-gradient-to-r hover:from-emerald-50 hover:to-blue-50 transition-all duration-300">
-                <td colSpan={8} className="px-6 py-4">
-                  <Button
-                    variant="ghost"
-                    onClick={handleAddNew}
-                    disabled={createMutation.isPending}
-                    className="w-full h-10 text-slate-600 hover:text-slate-800 hover:bg-gradient-to-r hover:from-blue-50 hover:to-emerald-50 border-2 border-dashed border-slate-300 hover:border-blue-400 transition-all duration-300 rounded-xl group"
-                  >
-                    <Plus className="h-4 w-4 mr-3 group-hover:scale-110 transition-transform duration-200" />
-                    <span className="font-medium">
-                      {createMutation.isPending ? "Adding new application..." : "Add New Application"}
-                    </span>
-                  </Button>
-                </td>
-              </tr>
-              
-              {applications.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center">
-                    <div className="text-slate-500">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Building className="h-8 w-8 text-slate-400" />
-                      </div>
-                      <h3 className="text-lg font-medium text-slate-900 mb-2">No applications yet</h3>
-                      <p>Click the + button above to add your first application.</p>
-                    </div>
-                  </td>
-                </tr>
+                </DropdownMenuCheckboxItem>
+              ))}
+              {statusFilter.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setStatusFilter([])}>
+                    Clear filters
+                  </DropdownMenuItem>
+                </>
               )}
-              {sortedApplications.map((application, index) => {
-                const isRejected = application.jobStatus === "Rejected";
-                return (
-                <tr key={application.id} className={`transition-all duration-300 group border-l-4 ${
-                  isRejected 
-                    ? "bg-red-50/50 hover:bg-red-50 border-l-red-300 opacity-75" 
-                    : "hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 border-l-transparent hover:border-l-blue-400"
-                }`}>
-                  <td className="px-3 py-4">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-1 h-8 bg-gradient-to-b from-blue-400 to-blue-600 rounded-full"></div>
-                      <div className="min-w-[80px]">
-                        <div className="font-medium text-sm text-slate-800">
-                          {formatDate(application.dateApplied)}
-                        </div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          <NotionCell
-                            type="date"
-                            value={application.dateApplied}
-                            onSave={(value) => handleCellUpdate(application.id, "dateApplied", value)}
-                            className="opacity-0 hover:opacity-100 transition-opacity duration-200"
-                            readOnly={isDateInPast(application.dateApplied)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm border border-slate-200 overflow-hidden">
-                        {application.companyName ? (
-                          <img
-                            src={getCompanyLogo(application.companyName) || ""}
-                            alt={`${application.companyName} logo`}
-                            className="w-6 h-6 object-contain"
-                            onError={(e) => {
-                              const target = e.currentTarget as HTMLImageElement;
-                              target.style.display = 'none';
-                              const fallback = target.nextElementSibling as HTMLElement;
-                              if (fallback) fallback.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <Building className="text-slate-500 h-4 w-4 hidden" />
-                      </div>
-                      <NotionCell
-                        value={application.companyName}
-                        onSave={(value) => handleCellUpdate(application.id, "companyName", value)}
-                        placeholder="Company name"
-                        className="font-semibold text-slate-800 text-sm"
-                      />
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <NotionCell
-                      type="select"
-                      value={application.roleTitle || "Senior Product Manager"}
-                      onSave={(value) => handleCellUpdate(application.id, "roleTitle", value)}
-                      options={ROLE_TITLES}
-                      placeholder="Role title"
-                      className="font-medium text-slate-700 text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <NotionCell
-                      type="select"
-                      value={application.jobStatus}
-                      onSave={(value) => handleCellUpdate(application.id, "jobStatus", value)}
-                      options={JOB_STATUSES}
-                      className={`text-xs font-medium px-3 py-1 rounded-full ${getStatusBadge(application.jobStatus)}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <NotionCell
-                      type="select"
-                      value={application.applicationStage || "In Review"}
-                      onSave={(value) => handleCellUpdate(application.id, "applicationStage", value)}
-                      options={APPLICATION_STAGES}
-                      className={`text-xs font-medium px-3 py-1 rounded-full ${getStageBadge(application.applicationStage || "In Review", application.jobStatus)}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <NotionCell
-                      value={application.resumeVersion || ""}
-                      onSave={(value) => handleCellUpdate(application.id, "resumeVersion", value)}
-                      placeholder="Resume version"
-                      className="text-slate-600 text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <NotionCell
-                      type="select"
-                      value={application.modeOfApplication || "Company Site"}
-                      onSave={(value) => handleCellUpdate(application.id, "modeOfApplication", value)}
-                      options={MODES_OF_APPLICATION}
-                      placeholder="Select mode"
-                      className="text-slate-600 text-sm"
-                    />
-                  </td>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-                  <td className="px-4 py-3">
-                    <div className="opacity-0 group-hover:opacity-100 transition-all duration-300">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                        onClick={() => deleteMutation.mutate(application.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* Add Application Button */}
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Application
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Application</DialogTitle>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="company">Company Name</Label>
+                    <Input
+                      id="company"
+                      value={newApplication.companyName}
+                      onChange={(e) => setNewApplication({...newApplication, companyName: e.target.value})}
+                      placeholder="e.g. Google"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="position">Role Title</Label>
+                    <Select value={newApplication.roleTitle} onValueChange={(value) => setNewApplication({...newApplication, roleTitle: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ROLE_TITLES.map(role => (
+                          <SelectItem key={role} value={role}>{role}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Job Status</Label>
+                    <Select value={newApplication.jobStatus} onValueChange={(value: any) => setNewApplication({...newApplication, jobStatus: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {JOB_STATUSES.map(status => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="stage">Application Stage</Label>
+                    <Select value={newApplication.applicationStage} onValueChange={(value: any) => setNewApplication({...newApplication, applicationStage: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {APPLICATION_STAGES.map(stage => (
+                          <SelectItem key={stage} value={stage}>{stage}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="date">Date Applied</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={newApplication.dateApplied}
+                      onChange={(e) => setNewApplication({...newApplication, dateApplied: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mode">Mode of Application</Label>
+                    <Select value={newApplication.modeOfApplication} onValueChange={(value: any) => setNewApplication({...newApplication, modeOfApplication: value})}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MODES_OF_APPLICATION.map(mode => (
+                          <SelectItem key={mode} value={mode}>{mode}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="url">Role URL</Label>
+                  <Input
+                    id="url"
+                    type="url"
+                    value={newApplication.roleUrl}
+                    onChange={(e) => setNewApplication({...newApplication, roleUrl: e.target.value})}
+                    placeholder="https://..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="resume">Resume Version</Label>
+                  <Input
+                    id="resume"
+                    value={newApplication.resumeVersion}
+                    onChange={(e) => setNewApplication({...newApplication, resumeVersion: e.target.value})}
+                    placeholder="e.g. v2.1, PM_Focus"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreate} disabled={!newApplication.companyName || !newApplication.roleTitle}>
+                  Add Application
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
-      </Card>
+      </div>
+
+      {/* Applications Table */}
+      <div className="border rounded-lg bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-b border-gray-200">
+              <TableHead className="w-12"></TableHead>
+              <TableHead className="font-semibold">Company</TableHead>
+              <TableHead className="font-semibold">Role</TableHead>
+              <TableHead className="font-semibold">Status</TableHead>
+              <TableHead className="font-semibold">Stage</TableHead>
+              <TableHead className="font-semibold">Applied</TableHead>
+              <TableHead className="font-semibold">Source</TableHead>
+              <TableHead className="w-12"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading && applications.length === 0 ? (
+              [...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-32 animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-40 animate-pulse" /></TableCell>
+                  <TableCell><div className="h-6 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
+                  <TableCell><div className="h-6 bg-gray-200 rounded w-24 animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
+                  <TableCell><div className="h-4 bg-gray-200 rounded w-16 animate-pulse" /></TableCell>
+                  <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
+                </TableRow>
+              ))
+            ) : filteredApplications.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-12">
+                  <div className="text-gray-500">
+                    {searchTerm || statusFilter.length > 0
+                      ? "No applications match your filters"
+                      : "No applications yet. Add your first one!"}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredApplications.map((application) => (
+                <TableRow key={application.id} className="hover:bg-gray-50">
+                  <TableCell>
+                    <CompanyLogo companyName={application.companyName || ''} />
+                  </TableCell>
+                  <TableCell>
+                    <NotionCell
+                      value={application.companyName || ''}
+                      onSave={(value) => onEdit(application.id.toString(), 'companyName', value)}
+                      className="font-medium"
+                      placeholder="Company Name"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <NotionCell
+                      value={application.roleTitle || ''}
+                      onSave={(value) => onEdit(application.id.toString(), 'roleTitle', value)}
+                      className="font-medium text-gray-900"
+                      placeholder="Role Title"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`${statusColors[application.jobStatus as keyof typeof statusColors] || statusColors['Applied']} border font-medium`}>
+                      {application.jobStatus}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`${stageColors[application.applicationStage as keyof typeof stageColors] || stageColors['In Review']} border text-xs`}>
+                      {application.applicationStage}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    <div className="flex items-center">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      {formatDate(application.dateApplied)}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600">
+                    {application.modeOfApplication && (
+                      <div className="flex items-center">
+                        <User className="w-3 h-3 mr-1" />
+                        {application.modeOfApplication}
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {application.roleUrl && (
+                          <DropdownMenuItem onClick={() => window.open(application.roleUrl!, '_blank')}>
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            View Job
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={() => setDeleteId(application.id.toString())}
+                          className="text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Application</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this application? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
-  );
+  )
 }

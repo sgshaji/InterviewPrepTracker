@@ -3,7 +3,7 @@
 import { useLocation } from "react-router-dom"
 import { useMemo } from "react"
 import { useApplications } from "../hooks/use-applications"
-import ModernApplicationTable from "../components/modern-application-table-final"
+import ApplicationTable from "../components/application-table"
 
 function useQuery() {
   const { search } = useLocation();
@@ -46,7 +46,7 @@ export default function ApplicationsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-[1400px] mx-auto p-6">
-        <ModernApplicationTable
+        <ApplicationTable
           applications={applications}
           loading={loading}
           error={error}
