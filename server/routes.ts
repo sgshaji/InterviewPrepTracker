@@ -105,6 +105,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return currentStatus;
   }
 
+  // Company logo endpoint with caching
+  app.get('/api/logo/:companyName', async (req, res) => {
+    try {
+      const { CompanyLogoService } = await import('./logo-cache')
+      const companyName = decodeURIComponent(req.params.companyName)
+      const logoData = await CompanyLogoService.getCompanyLogo(companyName)
+      
+      res.set('Cache-Control', 'public, max-age=86400') // 24 hours
+      res.json(logoData)
+    } catch (error) {
+      console.error('Logo service error:', error)
+      res.status(500).json({ error: 'Failed to get logo' })
+    }
+  })
+
   // Applications endpoints
   app.get("/api/applications", async (req, res) => {
     try {
