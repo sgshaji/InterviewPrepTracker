@@ -115,24 +115,25 @@ export class DatabaseStorage implements IStorage {
     // If not in cache, fetch from database
     const dbStart = Date.now();
 
-    // Get total count
-    const [{ count: totalCount }] = await db
-      .select({ count: count() })
-      .from(applications)
-      .where(eq(applications.userId, userId));
-
-    // Get paginated results
+    // Use single query with window function for better performance
     const result = await db
-      .select()
+      .select({
+        ...applications,
+        totalCount: sql<number>`count(*) over()`.as('total_count')
+      })
       .from(applications)
       .where(eq(applications.userId, userId))
-      .orderBy(desc(applications.dateApplied))
+      .orderBy(desc(applications.dateApplied), desc(applications.createdAt))
       .limit(limit)
       .offset(page * limit);
     
     console.log(`DB query took ${Date.now() - dbStart}ms, total: ${Date.now() - startTime}ms`);
     
-    const response = { totalCount: Number(totalCount), applications: result };
+    // Extract totalCount from first row and clean up applications data
+    const totalCount = result.length > 0 ? Number(result[0].totalCount) : 0;
+    const applications = result.map(({ totalCount: _, ...app }) => app);
+    
+    const response = { totalCount, applications };
     
     // Cache for 5 minutes
     await cache.set(cacheKey, response, 300);
@@ -166,6 +167,10 @@ export class DatabaseStorage implements IStorage {
       .set({ ...application, updatedAt: new Date() })
       .where(eq(applications.id, id))
       .returning();
+    
+    // Invalidate cache for this user's applications
+    await cache.invalidatePattern(`applications:${updatedApplication.userId}:*`);
+    
     return updatedApplication;
   }
 
