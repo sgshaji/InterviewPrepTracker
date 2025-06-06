@@ -41,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Execute Python logo service
-      const pythonScript = path.join(__dirname, 'logo-service.py');
+      const pythonScript = path.join(process.cwd(), 'server', 'logo-service.py');
       const pythonProcess = spawn('python3', [pythonScript, companyName]);
       
       let output = '';

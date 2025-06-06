@@ -24,6 +24,8 @@ export const ROLE_TITLES = [
   "Principal Product Manager"
 ] as const;
 
+export const ROLE_OPTIONS = ROLE_TITLES;
+
 export const MODES_OF_APPLICATION = [
   "LinkedIn",
   "Company Site",

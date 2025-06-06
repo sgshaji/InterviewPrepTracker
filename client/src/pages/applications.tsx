@@ -3,7 +3,7 @@
 import { useLocation } from "react-router-dom"
 import { useMemo } from "react"
 import { useApplications } from "../hooks/use-applications"
-import ModernApplicationTable from "../components/modern-application-table"
+import ModernApplicationTable from "../components/modern-application-table-v2"
 
 function useQuery() {
   const { search } = useLocation();
