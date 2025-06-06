@@ -129,6 +129,8 @@ function TableRow({ index, style, data }: TableRowProps) {
         <NotionCell
           value={application.roleTitle}
           onSave={(value) => onEdit(String(application.id), 'roleTitle', value)}
+          type="select"
+          options={ROLE_TITLES}
           placeholder="Role title *"
           className={isIncomplete && !application.roleTitle.trim() ? 'border-red-400' : ''}
         />
