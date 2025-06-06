@@ -120,7 +120,7 @@ export default function AddInterviewDialog({ open, onOpenChange }: AddInterviewD
                   <SelectValue placeholder="Select application" />
                 </SelectTrigger>
                 <SelectContent>
-                  {applications?.map((app) => (
+                  {Array.isArray(applications) && applications.map((app) => (
                     <SelectItem key={app.id} value={app.id.toString()}>
                       {app.companyName} - {app.roleTitle}
                     </SelectItem>

@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { cache } from "./cache";
 import { 
   insertApplicationSchema, 
   insertPreparationSessionSchema, 
@@ -14,6 +15,8 @@ import compression from "compression";
 import { eq, and, inArray, sql, desc, count, or } from "drizzle-orm";
 import { db } from "./db";
 import { applications } from '../shared/schema';
+import { spawn } from 'child_process';
+import path from 'path';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enable compression
@@ -21,6 +24,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Mock user ID for demo purposes - in real app would come from authentication
   const getCurrentUserId = () => 1;
+
+  // Company logo API endpoint
+  app.get("/api/company-logo/:company", async (req, res) => {
+    try {
+      const companyName = decodeURIComponent(req.params.company);
+      if (!companyName || companyName.trim() === '') {
+        return res.status(400).json({ error: 'Company name is required' });
+      }
+
+      // Cache key for logo data
+      const cacheKey = cache.generateKey('logo', companyName.toLowerCase());
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
+      // Execute Python logo service
+      const pythonScript = path.join(process.cwd(), 'server', 'logo-service.py');
+      const pythonProcess = spawn('python3', [pythonScript, companyName]);
+      
+      let output = '';
+      let error = '';
+
+      pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      pythonProcess.stderr.on('data', (data) => {
+        error += data.toString();
+      });
+
+      pythonProcess.on('close', async (code) => {
+        if (code === 0 && output) {
+          try {
+            const result = JSON.parse(output.trim());
+            // Cache for 24 hours
+            await cache.set(cacheKey, result, 86400);
+            res.json(result);
+          } catch (parseError) {
+            res.status(500).json({ error: 'Failed to parse logo data' });
+          }
+        } else {
+          // Fallback to initials
+          const initials = companyName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+          const colors = ['3B82F6', '10B981', '8B5CF6', 'F59E0B', 'EF4444', '6366F1'];
+          const colorIndex = companyName.length % colors.length;
+          const fallback = {
+            url: `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${colors[colorIndex]}&color=fff&size=128&rounded=true&bold=true`,
+            source: 'initials',
+            initials
+          };
+          await cache.set(cacheKey, fallback, 86400);
+          res.json(fallback);
+        }
+      });
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        pythonProcess.kill();
+        const initials = companyName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+        const fallback = {
+          url: `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=6366F1&color=fff&size=128&rounded=true&bold=true`,
+          source: 'timeout',
+          initials
+        };
+        res.json(fallback);
+      }, 10000);
+
+    } catch (error) {
+      console.error('Logo API error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   function getStatusForStage(stage: string, currentStatus: string): string {
     if (["HR Round", "HM Round", "Panel", "Case Study"].includes(stage)) return "In Progress";
@@ -37,6 +113,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
       const interviewing = req.query.interviewing === "true";
       const search = req.query.search as string | undefined;
+
+      // Generate cache key based on query parameters
+      const cacheKey = cache.generateKey('applications', userId, page, limit, interviewing ? '1' : '0', search || '');
+      
+      // Try to get from cache first
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
 
       const interviewStages = ["HR Round", "HM Round", "Panel", "Case Study"];
 
@@ -67,7 +152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .limit(limit)
         .offset(page * limit);
 
-      res.json({ totalCount: totalCountResult.count, applications: apps });
+      const result = { totalCount: totalCountResult.count, applications: apps };
+      
+      // Cache the result for 5 minutes (300 seconds)
+      await cache.set(cacheKey, result, 300);
+      
+      res.json(result);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch applications" });
     }
@@ -98,6 +188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const validatedData = parsed.data;
       const application = await storage.createApplication(validatedData);
+      
+      // Invalidate applications cache for this user
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      
       res.status(201).json(application);
     } catch (error: unknown) {
       console.error("Error creating application:", error);
@@ -126,6 +220,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const validatedData = insertApplicationSchema.partial().parse(data);
       const application = await storage.updateApplication(id, validatedData);
+      
+      // Invalidate applications cache for this user
+      const userId = getCurrentUserId();
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      
       res.json(application);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -140,6 +239,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteApplication(id);
+      
+      // Invalidate applications cache for this user
+      const userId = getCurrentUserId();
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete application" });

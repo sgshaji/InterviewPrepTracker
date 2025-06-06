@@ -18,12 +18,13 @@ export const APPLICATION_STAGES = [
 
 export const ROLE_TITLES = [
   "Product Manager",
-  "Senior Product Manager",
-  "Principal Product Manager",
-  "Staff Product Manager",
+  "Senior Product Manager", 
   "Product Owner",
-  "Senior Product Owner"
+  "Staff Product Manager",
+  "Principal Product Manager"
 ] as const;
+
+export const ROLE_OPTIONS = ROLE_TITLES;
 
 export const MODES_OF_APPLICATION = [
   "LinkedIn",

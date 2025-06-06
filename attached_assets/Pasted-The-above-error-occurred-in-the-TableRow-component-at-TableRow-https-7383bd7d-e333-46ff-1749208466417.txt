@@ -1,0 +1,73 @@
+The above error occurred in the <TableRow> component:
+
+    at TableRow (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/components/modern-application-table.tsx:62:21)
+    at div
+    at div
+    at List (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-window.js?v=bb4c3e56:775:30)
+    at div
+    at AutoSizer (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-virtualized-auto-sizer.js?v=bb4c3e56:192:5)
+    at div
+    at div
+    at div
+    at ModernApplicationTable (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/components/modern-application-table.tsx:381:5)
+    at div
+    at div
+    at ApplicationsPage (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/pages/applications.tsx:33:17)
+    at ErrorBoundary (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/components/error-boundary.tsx:8:1)
+    at ProtectedRoute (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/lib/protected-route.tsx:17:34)
+    at RenderedRoute (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:5455:26)
+    at Routes (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:6188:3)
+    at div
+    at div
+    at Router
+    at Provider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=bb4c3e56:38:15)
+    at Provider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=bb4c3e56:38:15)
+    at CollectionProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-I6MJRFJY.js?v=bb4c3e56:29:13)
+    at ToastProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-toast.js?v=bb4c3e56:55:5)
+    at Provider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=bb4c3e56:38:15)
+    at TooltipProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=bb4c3e56:61:5)
+    at AuthProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/hooks/use-auth.tsx:26:32)
+    at QueryClientProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=bb4c3e56:2805:3)
+    at App
+    at Router (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:6131:13)
+    at BrowserRouter (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:9117:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+
+at TableRow (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/components/modern-application-table.tsx:62:21)
+at div
+at div
+at List (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-window.js?v=bb4c3e56:775:30)
+at div
+at AutoSizer (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-virtualized-auto-sizer.js?v=bb4c3e56:192:5)
+at div
+at div
+at div
+at ModernApplicationTable (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/components/modern-application-table.tsx:381:5)
+at div
+at div
+at ApplicationsPage (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/pages/applications.tsx:33:17)
+at ErrorBoundary (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/components/error-boundary.tsx:8:1)
+at ProtectedRoute (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/lib/protected-route.tsx:17:34)
+at RenderedRoute (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:5455:26)
+at Routes (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:6188:3)
+at div
+at div
+at Router
+at Provider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=bb4c3e56:38:15)
+at Provider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=bb4c3e56:38:15)
+at CollectionProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-I6MJRFJY.js?v=bb4c3e56:29:13)
+at ToastProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-toast.js?v=bb4c3e56:55:5)
+at Provider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-5AJU3CG7.js?v=bb4c3e56:38:15)
+at TooltipProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=bb4c3e56:61:5)
+at AuthProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/src/hooks/use-auth.tsx:26:32)
+at QueryClientProvider (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=bb4c3e56:2805:3)
+at App
+at Router (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:6131:13)
+at BrowserRouter (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=bb4c3e56:9117:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
+at t.value (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://7383bd7d-e333-46ff-bd22-dfb6d7d38932-00-3mf0d21m1712h.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

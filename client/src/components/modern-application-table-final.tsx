@@ -1,8 +1,10 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { Search, Plus, Filter, ChevronDown, Trash2, ExternalLink, Calendar, User } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { Search, Plus, Filter, ChevronDown, Trash2, Building2, ExternalLink, Calendar, MapPin, User } from 'lucide-react'
+import CompanyLogo from './company-logo'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
+import { Card, CardContent } from './ui/card'
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -23,13 +25,13 @@ import {
 } from './ui/alert-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
 import { Label } from './ui/label'
+import { Textarea } from './ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 import NotionCell from './notion-cell'
 import { JOB_STATUSES, APPLICATION_STAGES, ROLE_TITLES, MODES_OF_APPLICATION } from '../lib/constants'
 import type { Application } from '@shared/schema'
 
-interface ApplicationTableProps {
+interface ModernApplicationTableProps {
   applications: Application[]
   loading: boolean
   error: string | null
@@ -62,94 +64,19 @@ const stageColors = {
   'Offer': 'bg-green-500/10 text-green-700 border-green-200'
 }
 
-// Direct Clearbit logo component
-function CompanyLogo({ companyName, size = 'sm' }: { companyName: string; size?: 'sm' | 'md' }) {
-  const sizeClass = size === 'sm' ? 'w-8 h-8' : 'w-10 h-10'
-  
-  const getDomain = (name: string) => {
-    const cleanName = name.toLowerCase().trim()
-    const domainMap: Record<string, string> = {
-      'google': 'google.com',
-      'microsoft': 'microsoft.com',
-      'apple': 'apple.com',
-      'amazon': 'amazon.com',
-      'meta': 'meta.com',
-      'facebook': 'meta.com',
-      'netflix': 'netflix.com',
-      'uber': 'uber.com',
-      'airbnb': 'airbnb.com',
-      'spotify': 'spotify.com',
-      'linkedin': 'linkedin.com',
-      'twitter': 'x.com',
-      'tesla': 'tesla.com',
-      'salesforce': 'salesforce.com',
-      'adobe': 'adobe.com',
-      'oracle': 'oracle.com',
-      'ibm': 'ibm.com',
-      'intel': 'intel.com',
-      'nvidia': 'nvidia.com',
-      'paypal': 'paypal.com',
-      'stripe': 'stripe.com',
-      'shopify': 'shopify.com',
-      'zoom': 'zoom.us',
-      'slack': 'slack.com',
-      'dropbox': 'dropbox.com',
-      'atlassian': 'atlassian.com',
-      'figma': 'figma.com',
-      'notion': 'notion.so',
-      'wayfair': 'wayfair.com',
-      'miro': 'miro.com',
-      'intuit': 'intuit.com',
-      'target': 'target.com'
-    }
-    
-    if (domainMap[cleanName]) return domainMap[cleanName]
-    
-    for (const [key, domain] of Object.entries(domainMap)) {
-      if (cleanName.includes(key) || key.includes(cleanName)) {
-        return domain
-      }
-    }
-    
-    return `${cleanName.replace(/[^a-z0-9]/g, '')}.com`
-  }
-
-  const domain = getDomain(companyName)
-  const clearbitUrl = `https://logo.clearbit.com/${domain}`
-  const initials = companyName.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
-  
-  return (
-    <div className={`${sizeClass} rounded-lg overflow-hidden bg-white border border-gray-200 flex items-center justify-center`}>
-      <img
-        src={clearbitUrl}
-        alt={`${companyName} logo`}
-        className={`${sizeClass} object-contain`}
-        onError={(e) => {
-          const target = e.target as HTMLImageElement
-          target.style.display = 'none'
-          const parent = target.parentElement
-          if (parent) {
-            parent.innerHTML = `<div class="text-xs font-semibold text-gray-600">${initials}</div>`
-            parent.className = `${sizeClass} rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white`
-          }
-        }}
-      />
-    </div>
-  )
-}
-
-export default function ApplicationTable({ 
+export default function ModernApplicationTable({ 
   applications, 
   loading, 
   error,
   totalCount,
+  filters,
+  onFiltersChange,
   onEdit, 
   onDelete, 
   onAddNew,
   onLoadMore,
   hasMore
-}: ApplicationTableProps) {
-  const tableContainerRef = useRef<HTMLDivElement>(null)
+}: ModernApplicationTableProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -165,27 +92,6 @@ export default function ApplicationTable({
     resumeVersion: ''
   })
 
-  // Infinite scroll functionality
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!tableContainerRef.current || loading || !hasMore) return
-      
-      const container = tableContainerRef.current
-      const { scrollTop, scrollHeight, clientHeight } = container
-      
-      // Load more when scrolled to 80% of the container
-      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-        onLoadMore()
-      }
-    }
-
-    const container = tableContainerRef.current
-    if (container) {
-      container.addEventListener('scroll', handleScroll)
-      return () => container.removeEventListener('scroll', handleScroll)
-    }
-  }, [loading, hasMore, onLoadMore])
-
   const filteredApplications = useMemo(() => {
     return applications.filter(app => {
       const matchesSearch = !searchTerm || 
@@ -198,14 +104,14 @@ export default function ApplicationTable({
     })
   }, [applications, searchTerm, statusFilter])
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(async () => {
     if (deleteId) {
       await onDelete(deleteId)
       setDeleteId(null)
     }
-  }
+  }, [deleteId, onDelete])
 
-  const handleCreate = async () => {
+  const handleCreate = useCallback(async () => {
     if (newApplication.companyName && newApplication.roleTitle) {
       await onAddNew(newApplication)
       setNewApplication({
@@ -220,7 +126,7 @@ export default function ApplicationTable({
       })
       setIsAddDialogOpen(false)
     }
-  }
+  }, [newApplication, onAddNew])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -230,12 +136,49 @@ export default function ApplicationTable({
     })
   }
 
+  if (loading && applications.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-8 bg-gray-200 rounded w-64 animate-pulse" />
+          <div className="flex gap-2">
+            <div className="h-9 bg-gray-200 rounded w-24 animate-pulse" />
+            <div className="h-9 bg-gray-200 rounded w-32 animate-pulse" />
+          </div>
+        </div>
+        {[...Array(5)].map((_, i) => (
+          <Card key={i} className="animate-pulse">
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-gray-200 rounded-lg" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-48" />
+                    <div className="h-3 bg-gray-200 rounded w-32" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="h-3 bg-gray-200 rounded" />
+                  <div className="h-3 bg-gray-200 rounded" />
+                  <div className="h-3 bg-gray-200 rounded" />
+                  <div className="h-3 bg-gray-200 rounded" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-500 mb-4">Error loading applications</div>
-        <p className="text-gray-500">{error}</p>
-      </div>
+      <Card className="text-center py-12">
+        <CardContent>
+          <div className="text-red-500 mb-4">Error loading applications</div>
+          <p className="text-gray-500">{error}</p>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -249,7 +192,7 @@ export default function ApplicationTable({
             placeholder="Search applications..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 bg-white border-gray-200"
+            className="pl-9 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500"
           />
         </div>
         
@@ -257,7 +200,7 @@ export default function ApplicationTable({
           {/* Status Filter */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-gray-200">
+              <Button variant="outline" className="border-gray-200 hover:bg-gray-50">
                 <Filter className="w-4 h-4 mr-2" />
                 Status
                 {statusFilter.length > 0 && (
@@ -424,161 +367,131 @@ export default function ApplicationTable({
         </div>
       </div>
 
-      {/* Applications Table with Scrolling */}
-      <div className="border rounded-lg bg-white overflow-hidden">
-        <div ref={tableContainerRef} className="max-h-[600px] overflow-y-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-white z-10">
-              <TableRow className="border-b border-gray-200">
-                <TableHead className="w-12"></TableHead>
-                <TableHead className="font-semibold">Company</TableHead>
-                <TableHead className="font-semibold">Role</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold">Stage</TableHead>
-                <TableHead className="font-semibold">Applied</TableHead>
-                <TableHead className="font-semibold">Source</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading && applications.length === 0 ? (
-                [...Array(5)].map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
-                    <TableCell><div className="h-4 bg-gray-200 rounded w-32 animate-pulse" /></TableCell>
-                    <TableCell><div className="h-4 bg-gray-200 rounded w-40 animate-pulse" /></TableCell>
-                    <TableCell><div className="h-6 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
-                    <TableCell><div className="h-6 bg-gray-200 rounded w-24 animate-pulse" /></TableCell>
-                    <TableCell><div className="h-4 bg-gray-200 rounded w-20 animate-pulse" /></TableCell>
-                    <TableCell><div className="h-4 bg-gray-200 rounded w-16 animate-pulse" /></TableCell>
-                    <TableCell><div className="w-8 h-8 bg-gray-200 rounded animate-pulse" /></TableCell>
-                  </TableRow>
-                ))
-              ) : filteredApplications.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">
-                    <div className="text-gray-500">
-                      {searchTerm || statusFilter.length > 0
-                        ? "No applications match your filters"
-                        : "No applications yet. Add your first one!"}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredApplications.map((application) => (
-                  <TableRow key={application.id} className="hover:bg-gray-50">
-                    <TableCell>
-                      <CompanyLogo companyName={application.companyName || ''} />
-                    </TableCell>
-                    <TableCell>
+      {/* Applications Grid */}
+      <div className="space-y-4">
+        {filteredApplications.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Building2 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No applications found</h3>
+              <p className="text-gray-500 mb-4">
+                {searchTerm || statusFilter.length > 0
+                  ? "Try adjusting your filters or search terms"
+                  : "Get started by adding your first job application"}
+              </p>
+              <Button onClick={() => setIsAddDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Application
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          filteredApplications.map((application) => (
+            <Card key={application.id} className="hover:shadow-md transition-shadow border-gray-200 bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-4 flex-1">
+                    {/* Company Logo */}
+                    <CompanyLogo 
+                      companyName={application.companyName || ''} 
+                      size="lg"
+                      className="ring-1 ring-gray-200 shadow-sm"
+                    />
+                    
+                    {/* Main Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <NotionCell
+                          value={application.roleTitle || ''}
+                          onSave={(value) => onEdit(application.id.toString(), 'roleTitle', value)}
+                          className="text-lg font-semibold text-gray-900"
+                          placeholder="Role Title"
+                        />
+                        <Badge className={`${statusColors[application.jobStatus as keyof typeof statusColors] || statusColors['Applied']} border font-medium`}>
+                          {application.jobStatus}
+                        </Badge>
+                        <Badge variant="outline" className={`${stageColors[application.applicationStage as keyof typeof stageColors] || stageColors['In Review']} border`}>
+                          {application.applicationStage}
+                        </Badge>
+                      </div>
+                      
                       <NotionCell
                         value={application.companyName || ''}
                         onSave={(value) => onEdit(application.id.toString(), 'companyName', value)}
-                        className="font-medium"
+                        className="text-gray-600 font-medium mb-3"
                         placeholder="Company Name"
                       />
-                    </TableCell>
-                    <TableCell>
-                      <NotionCell
-                        value={application.roleTitle || ''}
-                        onSave={(value) => onEdit(application.id.toString(), 'roleTitle', value)}
-                        className="font-medium text-gray-900"
-                        placeholder="Role Title"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Select 
-                        value={application.jobStatus} 
-                        onValueChange={(value) => onEdit(application.id.toString(), 'jobStatus', value)}
-                      >
-                        <SelectTrigger className="w-auto border-none bg-transparent p-0 h-auto">
-                          <Badge className={`${statusColors[application.jobStatus as keyof typeof statusColors] || statusColors['Applied']} border font-medium cursor-pointer hover:opacity-80`}>
-                            {application.jobStatus}
-                          </Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {JOB_STATUSES.map(status => (
-                            <SelectItem key={status} value={status}>{status}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select 
-                        value={application.applicationStage} 
-                        onValueChange={(value) => onEdit(application.id.toString(), 'applicationStage', value)}
-                      >
-                        <SelectTrigger className="w-auto border-none bg-transparent p-0 h-auto">
-                          <Badge variant="outline" className={`${stageColors[application.applicationStage as keyof typeof stageColors] || stageColors['In Review']} border text-xs cursor-pointer hover:opacity-80`}>
-                            {application.applicationStage}
-                          </Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {APPLICATION_STAGES.map(stage => (
-                            <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      <div className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        {formatDate(application.dateApplied)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {application.modeOfApplication && (
-                        <div className="flex items-center">
-                          <User className="w-3 h-3 mr-1" />
-                          {application.modeOfApplication}
+                      
+                      {/* Details Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                        <div className="flex items-center text-gray-500">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          {formatDate(application.dateApplied)}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="w-8 h-8 p-0">
-                            <ChevronDown className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {application.roleUrl && (
-                            <DropdownMenuItem onClick={() => window.open(application.roleUrl!, '_blank')}>
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              View Job
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={() => setDeleteId(application.id.toString())}
-                            className="text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-
-      {/* Loading indicator for infinite scroll */}
-      {loading && applications.length > 0 && (
-        <div className="text-center py-4 border-t border-gray-200">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            <span className="text-sm text-gray-600">Loading more applications...</span>
+                        
+                        {application.modeOfApplication && (
+                          <div className="flex items-center text-gray-500">
+                            <User className="w-4 h-4 mr-2" />
+                            {application.modeOfApplication}
+                          </div>
+                        )}
+                        
+                        {application.resumeVersion && (
+                          <div className="flex items-center text-gray-500">
+                            <MapPin className="w-4 h-4 mr-2" />
+                            <NotionCell
+                              value={application.resumeVersion}
+                              onSave={(value) => onEdit(application.id.toString(), 'resumeVersion', value)}
+                              className="text-gray-500"
+                              placeholder="Resume Version"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center space-x-2 ml-4">
+                    {application.roleUrl && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(application.roleUrl!, '_blank')}
+                        className="text-gray-500 hover:text-blue-600"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    )}
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="text-gray-500">
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setDeleteId(application.id.toString())}>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+        
+        {/* Load More Button */}
+        {hasMore && (
+          <div className="text-center py-4">
+            <Button variant="outline" onClick={onLoadMore} disabled={loading}>
+              {loading ? 'Loading...' : 'Load More Applications'}
+            </Button>
           </div>
-        </div>
-      )}
-
-      {/* Total Count */}
-      <div className="text-center text-sm text-gray-500 py-2">
-        Showing {filteredApplications.length} of {totalCount} applications
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
