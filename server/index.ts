@@ -29,8 +29,12 @@ app.use(express.urlencoded({ extended: false }));
 app.use(requestLogger);
 
 (async () => {
-  // Initialize Redis cache
-  await cache.connect();
+  // Initialize Redis cache (non-blocking)
+  try {
+    await cache.connect();
+  } catch (error) {
+    console.warn('⚠️  Cache initialization failed, continuing without cache:', error);
+  }
   
   // Setup authentication
   setupAuth(app);

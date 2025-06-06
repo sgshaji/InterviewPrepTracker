@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import NotionCell from './notion-cell'
 import { JOB_STATUSES, APPLICATION_STAGES, ROLE_TITLES, MODES_OF_APPLICATION } from '../lib/constants'
 import type { Application } from '@shared/schema'
+import { useToast } from '../hooks/use-toast'
 
 interface ApplicationTableProps {
   applications: Application[]
@@ -154,6 +155,7 @@ export default function ApplicationTable({
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const { toast } = useToast()
   const [newApplication, setNewApplication] = useState({
     companyName: '',
     roleTitle: '',
@@ -207,18 +209,32 @@ export default function ApplicationTable({
 
   const handleCreate = async () => {
     if (newApplication.companyName && newApplication.roleTitle) {
-      await onAddNew(newApplication)
-      setNewApplication({
-        companyName: '',
-        roleTitle: '',
-        jobStatus: 'Applied',
-        applicationStage: 'In Review',
-        dateApplied: new Date().toISOString().split('T')[0],
-        roleUrl: '',
-        modeOfApplication: 'LinkedIn',
-        resumeVersion: ''
+      try {
+        await onAddNew(newApplication)
+        setNewApplication({
+          companyName: '',
+          roleTitle: '',
+          jobStatus: 'Applied',
+          applicationStage: 'In Review',
+          dateApplied: new Date().toISOString().split('T')[0],
+          roleUrl: '',
+          modeOfApplication: 'LinkedIn',
+          resumeVersion: ''
+        })
+        setIsAddDialogOpen(false)
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to create application',
+          variant: 'destructive'
+        })
+      }
+    } else {
+      toast({
+        title: 'Validation Error',
+        description: 'Company name and role title are required',
+        variant: 'destructive'
       })
-      setIsAddDialogOpen(false)
     }
   }
 

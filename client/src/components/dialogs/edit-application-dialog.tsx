@@ -115,7 +115,7 @@ export const EditApplicationDialog: React.FC<EditApplicationDialogProps> = ({
         variant: "destructive",
       });
     } finally {
-      setIsSaving(false);
+    setIsSaving(false);
     }
   };
 

@@ -115,7 +115,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const search = req.query.search as string | undefined;
 
       // Generate cache key based on query parameters
-      const cacheKey = cache.generateKey('applications', userId, page, limit, interviewing ? '1' : '0', search || '');
+      const cacheKey = cache.generateKey('applications', userId.toString(), page.toString(), limit.toString(), interviewing ? '1' : '0', search || '');
       
       // Try to get from cache first
       const cached = await cache.get(cacheKey);
@@ -166,10 +166,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/applications", async (req, res) => {
     try {
       const userId = getCurrentUserId();
+      
+      // Remove id field if it exists to prevent conflicts
+      const { id, ...bodyData } = req.body;
+      
       let data = {
-        ...req.body,
+        ...bodyData,
         userId,
-        dateApplied: req.body.dateApplied || new Date().toISOString().split('T')[0]
+        dateApplied: bodyData.dateApplied || new Date().toISOString().split('T')[0]
       };
       
       // Auto-populate "No Callback" stage for Applied status with blank stage

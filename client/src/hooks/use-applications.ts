@@ -1,17 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from './use-toast'
+import type { Application } from '@shared/schema'
 
-export interface Application {
-  id: number | string  // number for DB records, string for temp records
-  companyName: string
-  companyLogo?: string
-  roleTitle: string
-  jobStatus: string
-  applicationStage?: string
-  resumeVersion?: string
-  modeOfApplication?: string
-  dateApplied?: string
-}
+export { type Application } from '@shared/schema'
 
 interface ApplicationFilters {
   search: string
@@ -30,7 +21,7 @@ interface UseApplicationsReturn {
   filters: ApplicationFilters
   setFilters: (filters: Partial<ApplicationFilters>) => void
   loadMore: () => void
-  addApplication: () => void
+  addApplication: (data?: Partial<Application>) => Promise<void>
   updateApplication: (id: string, field: string, value: string) => Promise<void>
   deleteApplication: (id: string) => Promise<void>
   refresh: () => void
@@ -111,20 +102,65 @@ export function useApplications(): UseApplicationsReturn {
     }
   }, [loading, hasMore, page, loadApplications])
 
-  const addApplication = useCallback(() => {
+  const addApplication = useCallback(async (data?: Partial<Application>) => {
     const today = new Date().toISOString().split('T')[0]
     const newApplication: Application = {
-      id: `temp-${Date.now()}`,
-      companyName: '',
-      roleTitle: '',
-      jobStatus: 'Applied',
-      applicationStage: 'In Review',
-      dateApplied: today,
-      resumeVersion: '',
-      modeOfApplication: 'Company Website'
+      id: -Date.now(), // Use negative number for temp IDs to avoid conflicts
+      userId: 1, // This should come from auth context
+      companyName: data?.companyName || '',
+      roleTitle: data?.roleTitle || '',
+      jobStatus: data?.jobStatus || 'Applied',
+      applicationStage: data?.applicationStage || 'In Review',
+      dateApplied: data?.dateApplied || today,
+      resumeVersion: data?.resumeVersion || null,
+      modeOfApplication: data?.modeOfApplication || 'Company Website',
+      roleUrl: data?.roleUrl || null,
+      followUpDate: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
-    setApplications(prev => [newApplication, ...prev])
-  }, [])
+
+    try {
+      // Optimistic update
+      setApplications(prev => [newApplication, ...prev])
+
+      // Remove id before sending to backend
+      const { id, userId, createdAt, updatedAt, ...newAppData } = newApplication;
+      const response = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAppData)
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create application')
+      }
+
+      const savedApplication = await response.json()
+      
+      // Update with saved application
+      setApplications(prev => 
+        prev.map(app => app.id === newApplication.id ? savedApplication : app)
+      )
+
+      toast({
+        title: 'Success',
+        description: 'Application created successfully'
+      })
+
+      // Refresh the list to ensure consistency
+      loadApplications(1, false)
+    } catch (err) {
+      // Revert optimistic update
+      setApplications(prev => prev.filter(app => app.id !== newApplication.id))
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create application'
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive'
+      })
+    }
+  }, [loadApplications])
 
   const updateApplication = useCallback(async (id: string, field: string, value: string) => {
     // Convert string ID back to proper type for comparison
