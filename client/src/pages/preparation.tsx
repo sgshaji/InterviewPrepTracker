@@ -9,33 +9,60 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PreparationSession } from "@shared/schema";
-import { Settings, Mail, Plus, Loader2 } from "lucide-react";
-import { useToast } from "@/components/ui/toast";
+import { Settings, Mail, Plus, Loader2, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import StarRating from "@/components/star-rating";
 
-// Validation schema
-const preparationSessionSchema = z.object({
-  date: z.string().min(1, "Date is required"),
+// Available preparation topics
+const PREPARATION_TOPICS = [
+  "Behavioral",
+  "Product Thinking", 
+  "Analytical Thinking",
+  "Product Portfolio",
+  "Technical Skills",
+  "Case Studies",
+  "System Design",
+  "Leadership",
+  "Communication",
+  "Market Research"
+];
+
+// Single topic entry validation
+const topicEntrySchema = z.object({
   topic: z.string().min(1, "Topic is required"),
-  resourceLink: z.string().optional(),
-  confidenceScore: z.number().min(0).max(5).optional(),
+  confidenceScore: z.number().min(0).max(5),
   notes: z.string().optional(),
+  resourceLink: z.string().optional(),
 });
 
-interface FormData {
-  date?: string;
-  topic?: string;
-  resourceLink?: string;
-  confidenceScore?: number;
+// Multi-topic form validation
+const multiTopicFormSchema = z.object({
+  date: z.string().min(1, "Date is required"),
+  entries: z.array(topicEntrySchema).min(1, "At least one topic entry is required").max(10, "Maximum 10 topics per day"),
+});
+
+interface TopicEntry {
+  topic: string;
+  confidenceScore: number;
   notes?: string;
+  resourceLink?: string;
+}
+
+interface MultiTopicFormData {
+  date: string;
+  entries: TopicEntry[];
 }
 
 export default function Preparation() {
   const [showEmailConfig, setShowEmailConfig] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [editingSession, setEditingSession] = useState<PreparationSession | null>(null);
-  const [formData, setFormData] = useState<FormData>({});
+  const [formData, setFormData] = useState<MultiTopicFormData>({
+    date: new Date().toISOString().split('T')[0],
+    entries: [{ topic: '', confidenceScore: 0, notes: '', resourceLink: '' }]
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -88,107 +115,99 @@ You're building great habits!
     queryKey: ["/api/preparation-sessions"],
   });
 
-  const createSessionMutation = useMutation({
-    mutationFn: async (session: FormData) => {
-      return await apiRequest("/api/preparation-sessions", "POST", session);
+  const createSessionsMutation = useMutation({
+    mutationFn: async (entries: TopicEntry[]) => {
+      // Submit each topic entry as a separate request
+      const promises = entries.map(entry => 
+        apiRequest("POST", "/api/preparation-sessions", {
+          date: formData.date,
+          topic: entry.topic,
+          confidenceScore: entry.confidenceScore,
+          notes: entry.notes || '',
+          resourceLink: entry.resourceLink || ''
+        })
+      );
+      return await Promise.all(promises);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/preparation-sessions"] });
       setShowEditDialog(false);
-      setFormData({});
+      resetForm();
       toast({
         title: "Success",
-        children: "Preparation session created successfully",
+        children: `${formData.entries.length} preparation session${formData.entries.length > 1 ? 's' : ''} created successfully`,
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        children: error instanceof Error ? error.message : "Failed to create preparation session",
+        children: error instanceof Error ? error.message : "Failed to create preparation sessions",
         variant: "destructive",
       });
     },
   });
 
-  const updateSessionMutation = useMutation({
-    mutationFn: async (session: PreparationSession) => {
-      return await apiRequest(`/api/preparation-sessions/${session.id}`, "PUT", session);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/preparation-sessions"] });
-      setShowEditDialog(false);
-      setEditingSession(null);
-      setFormData({});
-      toast({
-        title: "Success",
-        children: "Preparation session updated successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        children: error instanceof Error ? error.message : "Failed to update preparation session",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const saveEmailMutation = useMutation({
-    mutationFn: async (settings: typeof emailSettings) => {
-      return await apiRequest("/api/email-settings", "POST", settings);
-    },
-    onSuccess: () => {
-      setShowEmailConfig(false);
-      toast({
-        title: "Success",
-        children: "Email settings saved successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        children: error instanceof Error ? error.message : "Failed to save email settings",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleEdit = (session: PreparationSession) => {
-    setEditingSession(session);
-    setFormData({
-      date: session.date,
-      topic: session.topic,
-      resourceLink: session.resourceLink || '',
-      confidenceScore: session.confidenceScore || 0,
-      notes: session.notes || '',
-    });
-    setShowEditDialog(true);
-  };
-
-  const handleCreate = () => {
-    setEditingSession(null);
+  const resetForm = () => {
     setFormData({
       date: new Date().toISOString().split('T')[0],
-      topic: '',
-      resourceLink: '',
-      confidenceScore: 0,
-      notes: '',
+      entries: [{ topic: '', confidenceScore: 0, notes: '', resourceLink: '' }]
     });
-    setShowEditDialog(true);
+    setErrors({});
+  };
+
+  const addTopicEntry = () => {
+    if (formData.entries.length < 10) {
+      setFormData(prev => ({
+        ...prev,
+        entries: [...prev.entries, { topic: '', confidenceScore: 0, notes: '', resourceLink: '' }]
+      }));
+    }
+  };
+
+  const removeTopicEntry = (index: number) => {
+    if (formData.entries.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        entries: prev.entries.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const updateTopicEntry = (index: number, field: keyof TopicEntry, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      entries: prev.entries.map((entry, i) => 
+        i === index ? { ...entry, [field]: value } : entry
+      )
+    }));
   };
 
   const validateForm = (): boolean => {
     try {
-      preparationSessionSchema.parse(formData);
+      multiTopicFormSchema.parse(formData);
+      
+      // Check for duplicate topics
+      const topicCounts = formData.entries.reduce((acc, entry) => {
+        if (entry.topic) {
+          acc[entry.topic] = (acc[entry.topic] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const duplicates = Object.entries(topicCounts).filter(([_, count]) => count > 1);
+      if (duplicates.length > 0) {
+        setErrors({ general: `Duplicate topics not allowed: ${duplicates.map(([topic]) => topic).join(', ')}` });
+        return false;
+      }
+      
       setErrors({});
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
-          if (err.path[0]) {
-            newErrors[err.path[0].toString()] = err.message;
-          }
+          const path = err.path.join('.');
+          newErrors[path] = err.message;
         });
         setErrors(newErrors);
       }
@@ -206,11 +225,24 @@ You're building great habits!
       return;
     }
 
-    if (editingSession) {
-      await updateSessionMutation.mutateAsync({ ...editingSession, ...formData });
-    } else {
-      await createSessionMutation.mutateAsync(formData);
+    // Filter out entries without topics
+    const validEntries = formData.entries.filter(entry => entry.topic.trim());
+    
+    if (validEntries.length === 0) {
+      toast({
+        title: "Error", 
+        children: "Please add at least one topic",
+        variant: "destructive",
+      });
+      return;
     }
+
+    await createSessionsMutation.mutateAsync(validEntries);
+  };
+
+  const handleCreate = () => {
+    resetForm();
+    setShowEditDialog(true);
   };
 
   return (
@@ -461,19 +493,23 @@ You're building great habits!
       </main>
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingSession ? "Edit Preparation Entry" : "New Preparation Entry"}
+              New Multi-Topic Preparation Entry
             </DialogTitle>
+            <div className="text-sm text-slate-600">
+              Add multiple preparation topics in a single entry
+            </div>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-6 py-4">
+            {/* Date Selection */}
             <div>
               <Label htmlFor="date">Date</Label>
               <Input
                 id="date"
                 type="date"
-                value={formData.date || ''}
+                value={formData.date}
                 onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
                 className={errors.date ? "border-red-500" : ""}
               />
@@ -481,50 +517,112 @@ You're building great habits!
                 <p className="text-sm text-red-500 mt-1">{errors.date}</p>
               )}
             </div>
-            <div>
-              <Label htmlFor="topic">Topic</Label>
-              <Input
-                id="topic"
-                value={formData.topic || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                className={errors.topic ? "border-red-500" : ""}
-              />
-              {errors.topic && (
-                <p className="text-sm text-red-500 mt-1">{errors.topic}</p>
+
+            {/* General Error */}
+            {errors.general && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">{errors.general}</p>
+              </div>
+            )}
+
+            {/* Topic Entries */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">Preparation Topics</Label>
+                <span className="text-sm text-slate-500">{formData.entries.length}/10 topics</span>
+              </div>
+              
+              {formData.entries.map((entry, index) => (
+                <div key={index} className="border border-slate-200 rounded-lg p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-slate-700">Topic {index + 1}</span>
+                    {formData.entries.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeTopicEntry(index)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Topic *</Label>
+                      <Select
+                        value={entry.topic}
+                        onValueChange={(value) => updateTopicEntry(index, 'topic', value)}
+                      >
+                        <SelectTrigger className={errors[`entries.${index}.topic`] ? "border-red-500" : ""}>
+                          <SelectValue placeholder="Select a topic" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PREPARATION_TOPICS.filter(topic => 
+                            !formData.entries.some((e, i) => i !== index && e.topic === topic)
+                          ).map((topic) => (
+                            <SelectItem key={topic} value={topic}>
+                              {topic}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors[`entries.${index}.topic`] && (
+                        <p className="text-sm text-red-500">{errors[`entries.${index}.topic`]}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Confidence Score</Label>
+                      <div className="flex items-center space-x-2">
+                        <StarRating
+                          value={entry.confidenceScore}
+                          onChange={(value) => updateTopicEntry(index, 'confidenceScore', value)}
+                          size="sm"
+                        />
+                        <span className="text-sm text-slate-500">
+                          {entry.confidenceScore}/5
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Notes</Label>
+                      <Textarea
+                        value={entry.notes || ''}
+                        onChange={(e) => updateTopicEntry(index, 'notes', e.target.value)}
+                        placeholder={`Add notes about your ${entry.topic || 'topic'} preparation...`}
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Resource Link</Label>
+                      <Input
+                        value={entry.resourceLink || ''}
+                        onChange={(e) => updateTopicEntry(index, 'resourceLink', e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {formData.entries.length < 10 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addTopicEntry}
+                  className="w-full border-dashed border-2 border-slate-300 hover:border-slate-400 py-6"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Another Topic
+                </Button>
               )}
-            </div>
-            <div>
-              <Label htmlFor="resourceLink">Resource Link</Label>
-              <Input
-                id="resourceLink"
-                value={formData.resourceLink || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, resourceLink: e.target.value }))}
-                placeholder="https://..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="confidenceScore">Confidence Score (0-5)</Label>
-              <Input
-                id="confidenceScore"
-                type="number"
-                min="0"
-                max="5"
-                value={formData.confidenceScore || 0}
-                onChange={(e) => setFormData(prev => ({ ...prev, confidenceScore: parseInt(e.target.value) || 0 }))}
-                className={errors.confidenceScore ? "border-red-500" : ""}
-              />
-              {errors.confidenceScore && (
-                <p className="text-sm text-red-500 mt-1">{errors.confidenceScore}</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Add any additional notes about your preparation..."
-              />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -533,9 +631,9 @@ You're building great habits!
             </Button>
             <Button 
               onClick={handleSubmit}
-              disabled={createSessionMutation.isPending || updateSessionMutation.isPending}
+              disabled={createSessionsMutation.isPending}
             >
-              {createSessionMutation.isPending || updateSessionMutation.isPending ? (
+              {createSessionsMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...

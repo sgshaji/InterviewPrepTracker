@@ -2,9 +2,16 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PreparationSession } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import NotionCell from "./notion-cell";
 import StarRating from "./star-rating";
-import { PREPARATION_TOPICS } from "@/lib/constants";
+import { format, subDays, addDays } from "date-fns";
+import { Button } from "./ui/button";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Settings, Plus, X, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { Badge } from "./ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 
 // Make preparation topics configurable
 const DEFAULT_PREP_TOPICS = ["Behavioral", "Product Thinking", "Analytical Thinking", "Product Portfolio"];
@@ -12,21 +19,17 @@ const DEFAULT_PREP_TOPICS = ["Behavioral", "Product Thinking", "Analytical Think
 interface PrepTopicsConfig {
   topics: string[];
 }
-import { format, subDays, addDays } from "date-fns";
-import { Button } from "./ui/button";
-import { ChevronLeft, ChevronRight, Settings, Plus, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 
 interface DailyPrepTableProps {
   sessions: PreparationSession[];
   isLoading: boolean;
 }
 
-interface DayData {
+interface DayGroup {
   date: string;
-  sessions: Record<string, PreparationSession>;
+  sessions: PreparationSession[];
+  topics: string[];
+  averageConfidence: number;
 }
 
 export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTableProps) {
@@ -37,28 +40,9 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
     return addDays(today, mondayOffset);
   });
   
-  const [prepTopics, setPrepTopics] = useState<string[]>(DEFAULT_PREP_TOPICS);
-  const [showTopicsConfig, setShowTopicsConfig] = useState(false);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const queryClient = useQueryClient();
-
-  const createMutation = useMutation({
-    mutationFn: async (data: { date: string; topic: string; notes: string; confidenceScore: number }) => {
-      return await apiRequest("/api/preparation-sessions", "POST", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/preparation-sessions"] });
-    }
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<PreparationSession> }) => {
-      return await apiRequest(`/api/preparation-sessions/${id}`, "PUT", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/preparation-sessions"] });
-    }
-  });
 
   // Generate days from current week start, but only up to today
   const today = new Date();
@@ -66,32 +50,34 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
     .filter(day => day <= today) // Only show current and past dates
     .reverse(); // Sort by most recent first
 
-  // Group sessions by date and topic
-  const sessionsByDate = sessions.reduce((acc, session) => {
-    const dateKey = format(new Date(session.date), 'yyyy-MM-dd');
-    if (!acc[dateKey]) acc[dateKey] = {};
-    acc[dateKey][session.topic] = session;
-    return acc;
-  }, {} as Record<string, Record<string, PreparationSession>>);
+  // Group sessions by date
+  const groupedSessions: DayGroup[] = weekDays.map(day => {
+    const dateKey = format(day, 'yyyy-MM-dd');
+    const daySessions = sessions.filter(session => 
+      format(new Date(session.date), 'yyyy-MM-dd') === dateKey
+    );
+    
+    const topics = daySessions.map(s => s.topic);
+    const averageConfidence = daySessions.length > 0 
+      ? daySessions.reduce((sum, s) => sum + (s.confidenceScore || 0), 0) / daySessions.length
+      : 0;
 
-  const handleCellUpdate = (date: string, topic: string, field: 'notes' | 'confidenceScore', value: string | number) => {
-    const dateKey = format(new Date(date), 'yyyy-MM-dd');
-    const existingSession = sessionsByDate[dateKey]?.[topic];
+    return {
+      date: dateKey,
+      sessions: daySessions,
+      topics,
+      averageConfidence
+    };
+  });
 
-    if (existingSession) {
-      updateMutation.mutate({
-        id: existingSession.id,
-        data: { [field]: value }
-      });
+  const toggleRowExpansion = (date: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(date)) {
+      newExpanded.delete(date);
     } else {
-      // Create new session
-      createMutation.mutate({
-        date: dateKey,
-        topic,
-        notes: field === 'notes' ? value as string : '',
-        confidenceScore: field === 'confidenceScore' ? value as number : 0
-      });
+      newExpanded.add(date);
     }
+    setExpandedRows(newExpanded);
   };
 
   const goToPreviousWeek = () => {
@@ -136,79 +122,149 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
           <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
             Today
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowTopicsConfig(true)}>
-            <Settings className="h-4 w-4 mr-2" />
-            Configure Topics
-          </Button>
         </div>
       </div>
 
-      {/* Daily Preparation Table */}
+      {/* Daily Preparation Table - One Row Per Day */}
       <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[120px]">
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-32">
                   Date
                 </th>
-                {prepTopics.map(topic => (
-                  <th key={topic} className="px-4 py-3 text-left text-sm font-semibold text-slate-700 min-w-[200px]">
-                    {topic}
-                  </th>
-                ))}
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
+                  Topics Prepared
+                </th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-48">
+                  Average Confidence
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {weekDays.map(day => {
-                const dateKey = format(day, 'yyyy-MM-dd');
-                const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                const isPast = day < new Date() && !isToday;
+              {groupedSessions.map(dayGroup => {
+                const isToday = dayGroup.date === format(new Date(), 'yyyy-MM-dd');
+                const isPast = new Date(dayGroup.date) < new Date() && !isToday;
+                const isExpanded = expandedRows.has(dayGroup.date);
+                const hasPreparation = dayGroup.sessions.length > 0;
                 
                 return (
-                  <tr 
-                    key={dateKey} 
-                    className={`hover:bg-slate-50 transition-colors ${isToday ? 'bg-blue-50 border-l-4 border-l-blue-400' : ''}`}
-                  >
-                    <td className="px-4 py-4">
-                      <div className={`font-medium ${isToday ? 'text-blue-700' : isPast ? 'text-slate-500' : 'text-slate-700'}`}>
-                        {format(day, 'dd MMM yy')}
-                      </div>
-                      <div className={`text-xs ${isToday ? 'text-blue-600' : 'text-slate-400'}`}>
-                        {format(day, 'EEE')}
-                        {isToday && ' (Today)'}
-                      </div>
-                    </td>
-                    {prepTopics.map(topic => {
-                      const session = sessionsByDate[dateKey]?.[topic];
-                      
-                      return (
-                        <td key={topic} className="px-4 py-4">
-                          <div className="space-y-2">
-                            <NotionCell
-                              value={session?.notes || ""}
-                              onSave={(value) => handleCellUpdate(dateKey, topic, 'notes', value)}
-                              placeholder={`${topic} prep notes...`}
-                              className="text-sm"
-                              multiline
-                            />
-                            <div className="flex items-center space-x-2">
-                              <StarRating
-                                value={session?.confidenceScore || 0}
-                                onChange={(value) => handleCellUpdate(dateKey, topic, 'confidenceScore', value)}
-                                size="sm"
-                              />
-                              {session?.confidenceScore && (
-                                <span className="text-xs text-slate-500">
-                                  {session.confidenceScore}/5
-                                </span>
+                  <Collapsible key={dayGroup.date} open={isExpanded} onOpenChange={() => toggleRowExpansion(dayGroup.date)}>
+                    <CollapsibleTrigger asChild>
+                      <tr 
+                        className={`hover:bg-slate-50 transition-colors cursor-pointer ${isToday ? 'bg-blue-50 border-l-4 border-l-blue-400' : ''}`}
+                      >
+                        <td className="px-6 py-4">
+                          <div className={`font-medium ${isToday ? 'text-blue-700' : isPast ? 'text-slate-500' : 'text-slate-700'}`}>
+                            {format(new Date(dayGroup.date), 'dd MMM yy')}
+                          </div>
+                          <div className={`text-xs ${isToday ? 'text-blue-600' : 'text-slate-400'}`}>
+                            {format(new Date(dayGroup.date), 'EEE')}
+                            {isToday && ' (Today)'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {hasPreparation ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {dayGroup.topics.map((topic, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs px-2 py-1">
+                                  {topic}
+                                </Badge>
+                              ))}
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-slate-400 ml-2" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-slate-400 ml-2" />
                               )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-sm italic">No preparation logged</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {hasPreparation ? (
+                            <div className="flex items-center space-x-3">
+                              <StarRating
+                                value={dayGroup.averageConfidence}
+                                onChange={() => {}} // Read-only
+                                size="sm"
+                                readOnly
+                              />
+                              <span className="text-sm text-slate-600 font-medium">
+                                {dayGroup.averageConfidence.toFixed(1)}/5
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-sm">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    </CollapsibleTrigger>
+                    
+                    {/* Expanded Details */}
+                    <CollapsibleContent asChild>
+                      <tr className="bg-slate-50">
+                        <td colSpan={3} className="px-6 py-6">
+                                                    <div className="space-y-5">
+                            <div className="border-l-4 border-blue-400 pl-4">
+                              <h4 className="font-semibold text-slate-800 text-lg">
+                                Preparation Details
+                              </h4>
+                              <p className="text-slate-600 text-sm">
+                                {format(new Date(dayGroup.date), 'EEEE, MMMM d, yyyy')}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                              {dayGroup.sessions.map((session, index) => (
+                                <div key={session.id || index} className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="flex items-center justify-between mb-4">
+                                    <Badge variant="outline" className="font-medium text-sm px-3 py-1">
+                                      {session.topic}
+                                    </Badge>
+                                    <div className="flex items-center space-x-2">
+                                      <StarRating
+                                        value={session.confidenceScore || 0}
+                                        onChange={() => {}} // Read-only
+                                        size="sm"
+                                        readOnly
+                                      />
+                                      <span className="text-sm text-slate-600 font-medium">
+                                        {session.confidenceScore || 0}/5
+                                      </span>
+                                    </div>
+                                  </div>
+                                  
+                                  {session.notes && (
+                                    <div className="mb-4">
+                                      <Label className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Notes</Label>
+                                      <p className="text-sm text-slate-700 mt-2 bg-slate-50 p-3 rounded-lg leading-relaxed">
+                                        {session.notes}
+                                      </p>
+                                    </div>
+                                  )}
+                                  
+                                  {session.resourceLink && (
+                                    <div>
+                                      <Label className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Resource</Label>
+                                      <a 
+                                        href={session.resourceLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 hover:text-blue-800 text-sm underline block mt-2 break-all"
+                                      >
+                                        {session.resourceLink}
+                                      </a>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         </td>
-                      );
-                    })}
-                  </tr>
+                      </tr>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })}
             </tbody>
@@ -218,77 +274,44 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
 
       {/* Weekly Summary */}
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border p-4">
-        <h3 className="font-semibold text-slate-700 mb-2">Weekly Progress</h3>
+        <h3 className="font-semibold text-slate-700 mb-2">Weekly Progress Summary</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          {prepTopics.map(topic => {
-            const weekSessions = weekDays
-              .map(day => sessionsByDate[format(day, 'yyyy-MM-dd')]?.[topic])
-              .filter(Boolean);
-            
-            const avgConfidence = weekSessions.length > 0 
-              ? (weekSessions.reduce((sum, s) => sum + (s?.confidenceScore || 0), 0) / weekSessions.length).toFixed(1)
-              : '0.0';
-            
-            return (
-              <div key={topic} className="text-center">
-                <div className="font-medium text-slate-700">{topic}</div>
-                <div className="text-lg font-bold text-blue-600">{avgConfidence}/5</div>
-                <div className="text-xs text-slate-500">{weekSessions.length} sessions</div>
-              </div>
-            );
-          })}
+          <div className="text-center">
+            <div className="font-medium text-slate-700">Total Days</div>
+            <div className="text-lg font-bold text-blue-600">
+              {groupedSessions.filter(day => day.sessions.length > 0).length}
+            </div>
+            <div className="text-xs text-slate-500">with preparation</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="font-medium text-slate-700">Total Topics</div>
+            <div className="text-lg font-bold text-green-600">
+              {groupedSessions.reduce((sum, day) => sum + day.sessions.length, 0)}
+            </div>
+            <div className="text-xs text-slate-500">sessions logged</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="font-medium text-slate-700">Avg Confidence</div>
+            <div className="text-lg font-bold text-purple-600">
+              {sessions.length > 0 
+                ? (sessions.reduce((sum, s) => sum + (s.confidenceScore || 0), 0) / sessions.length).toFixed(1)
+                : '0.0'
+              }/5
+            </div>
+            <div className="text-xs text-slate-500">overall week</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="font-medium text-slate-700">Consistency</div>
+            <div className="text-lg font-bold text-orange-600">
+              {Math.round((groupedSessions.filter(day => day.sessions.length > 0).length / weekDays.length) * 100)}%
+            </div>
+            <div className="text-xs text-slate-500">days prepared</div>
+          </div>
         </div>
       </div>
-
-      {/* Topics Configuration Dialog */}
-      <Dialog open={showTopicsConfig} onOpenChange={setShowTopicsConfig}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Configure Preparation Topics</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {prepTopics.map((topic, index) => (
-              <div key={index} className="flex items-center space-x-2">
-                <Input
-                  value={topic}
-                  onChange={(e) => {
-                    const newTopics = [...prepTopics];
-                    newTopics[index] = e.target.value;
-                    setPrepTopics(newTopics);
-                  }}
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newTopics = prepTopics.filter((_, i) => i !== index);
-                    setPrepTopics(newTopics);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            
-            <Button
-              variant="outline"
-              onClick={() => setPrepTopics([...prepTopics, "New Topic"])}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Topic
-            </Button>
-            
-            <Button 
-              onClick={() => setShowTopicsConfig(false)}
-              className="w-full"
-            >
-              Save Configuration
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
