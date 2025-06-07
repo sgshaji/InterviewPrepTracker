@@ -20,7 +20,23 @@ export async function apiRequest<T>(
   });
 
   await throwIfResNotOk(res);
-  return res.json();
+  
+  // Handle empty responses (like 204 No Content)
+  if (res.status === 204 || res.headers.get("content-length") === "0") {
+    return {} as T;
+  }
+  
+  // Check if response has content before trying to parse JSON
+  const text = await res.text();
+  if (!text) {
+    return {} as T;
+  }
+  
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(`Failed to parse JSON response: ${text}`);
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

@@ -7,14 +7,15 @@ import {
   insertPreparationSessionSchema, 
   insertInterviewSchema, 
   insertAssessmentSchema,
-  insertReminderSchema 
+  insertReminderSchema,
+  insertTopicSchema 
 } from "@shared/schema";
 import { z } from "zod";
 import { validateDatabaseInput, asyncHandler, requestLogger } from "./middleware";
 import compression from "compression";
 import { eq, and, inArray, sql, desc, count, or } from "drizzle-orm";
 import { db } from "./db";
-import { applications } from '../shared/schema';
+import { applications, topics, preparationSessions } from '../shared/schema';
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -125,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = getCurrentUserId();
       const page = Math.max(0, parseInt(req.query.page as string) || 0);
-      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit as string) || 50));
       const interviewing = req.query.interviewing === "true";
       const search = req.query.search as string | undefined;
 
@@ -323,6 +324,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete preparation session" });
+    }
+  });
+
+  // Topics endpoints
+  app.get("/api/topics", async (req, res) => {
+    try {
+      const userId = getCurrentUserId();
+      
+      // Try cache first
+      const cacheKey = cache.generateKey('topics', userId.toString());
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
+      const userTopics = await db
+        .select()
+        .from(topics)
+        .where(eq(topics.userId, userId))
+        .orderBy(topics.createdAt);
+
+      // If no topics exist, create default ones
+      if (userTopics.length === 0) {
+        const defaultTopics = [
+          "Behavioral",
+          "Product Thinking", 
+          "Analytical Thinking",
+          "Product Portfolio",
+          "Technical Skills",
+          "Case Studies",
+          "System Design",
+          "Leadership",
+          "Communication",
+          "Market Research"
+        ];
+
+        for (const topicName of defaultTopics) {
+          await db.insert(topics).values({
+            userId,
+            name: topicName
+          });
+        }
+
+        // Fetch the newly created topics
+        const newTopics = await db
+          .select()
+          .from(topics)
+          .where(eq(topics.userId, userId))
+          .orderBy(topics.createdAt);
+
+        // Cache for 5 minutes
+        await cache.set(cacheKey, newTopics, 300);
+        res.json(newTopics);
+      } else {
+        // Cache for 5 minutes
+        await cache.set(cacheKey, userTopics, 300);
+        res.json(userTopics);
+      }
+    } catch (error) {
+      console.error('Topics fetch error:', error);
+      res.status(500).json({ message: "Failed to fetch topics" });
+    }
+  });
+
+  app.post("/api/topics", async (req, res) => {
+    try {
+      const userId = getCurrentUserId();
+      const validatedData = insertTopicSchema.parse({
+        ...req.body,
+        userId
+      });
+
+      // Check if topic already exists for this user
+      const existingTopic = await db
+        .select()
+        .from(topics)
+        .where(and(
+          eq(topics.userId, userId),
+          sql`LOWER(${topics.name}) = LOWER(${validatedData.name})`
+        ));
+
+      if (existingTopic.length > 0) {
+        return res.status(400).json({ message: "Topic already exists" });
+      }
+      
+      const [newTopic] = await db
+        .insert(topics)
+        .values(validatedData)
+        .returning();
+
+      // Invalidate cache
+      const cacheKey = cache.generateKey('topics', userId.toString());
+      await cache.del(cacheKey);
+
+      res.status(201).json(newTopic);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid topic data", errors: error.errors });
+      } else {
+        console.error('Topic creation error:', error);
+        res.status(500).json({ message: "Failed to create topic" });
+      }
+    }
+  });
+
+  app.delete("/api/topics/:id", async (req, res) => {
+    try {
+      const userId = getCurrentUserId();
+      const topicId = parseInt(req.params.id);
+
+      // Check if topic exists and belongs to user
+      const [topic] = await db
+        .select()
+        .from(topics)
+        .where(and(
+          eq(topics.id, topicId),
+          eq(topics.userId, userId)
+        ));
+
+      if (!topic) {
+        return res.status(404).json({ message: "Topic not found" });
+      }
+
+      // Check if topic is being used in preparation sessions
+      const usedInSessions = await db
+        .select({ count: count() })
+        .from(preparationSessions)
+        .where(and(
+          eq(preparationSessions.userId, userId),
+          eq(preparationSessions.topic, topic.name)
+        ));
+
+      if (usedInSessions[0].count > 0) {
+        return res.status(400).json({ 
+          message: "Cannot delete topic that is being used in preparation sessions" 
+        });
+      }
+
+      await db
+        .delete(topics)
+        .where(and(
+          eq(topics.id, topicId),
+          eq(topics.userId, userId)
+        ));
+
+      // Invalidate cache
+      const cacheKey = cache.generateKey('topics', userId.toString());
+      await cache.del(cacheKey);
+
+      res.status(204).send();
+    } catch (error) {
+      console.error('Topic deletion error:', error);
+      res.status(500).json({ message: "Failed to delete topic" });
     }
   });
 

@@ -33,11 +33,18 @@ export const applications = pgTable("applications", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const topics = pgTable("topics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const preparationSessions = pgTable("preparation_sessions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   date: date("date").notNull(),
-  topic: text("topic").notNull(), // Behavioral, Product Thinking, Analytical Thinking, Product Portfolio
+  topic: text("topic").notNull(), // Reference to topic name
   resourceLink: text("resource_link"),
   confidenceScore: integer("confidence_score"), // 1-5
   notes: text("notes"),
@@ -89,10 +96,15 @@ export const reminders = pgTable("reminders", {
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   applications: many(applications),
+  topics: many(topics),
   preparationSessions: many(preparationSessions),
   interviews: many(interviews),
   assessments: many(assessments),
   reminders: many(reminders),
+}));
+
+export const topicsRelations = relations(topics, ({ one }) => ({
+  user: one(users, { fields: [topics.userId], references: [users.id] }),
 }));
 
 export const applicationsRelations = relations(applications, ({ one, many }) => ({
@@ -140,6 +152,13 @@ export const insertApplicationSchema = createInsertSchema(applications).omit({
   roleTitle: z.string().min(1, "Role title is required"),
 });
 
+export const insertTopicSchema = createInsertSchema(topics).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  name: z.string().min(1, "Topic name is required").max(50, "Topic name too long"),
+});
+
 export const insertPreparationSessionSchema = createInsertSchema(preparationSessions).omit({
   id: true,
   createdAt: true,
@@ -179,6 +198,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Application = typeof applications.$inferSelect;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
+
+export type Topic = typeof topics.$inferSelect;
+export type InsertTopic = z.infer<typeof insertTopicSchema>;
 
 export type PreparationSession = typeof preparationSessions.$inferSelect;
 export type InsertPreparationSession = z.infer<typeof insertPreparationSessionSchema>;

@@ -16,19 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import StarRating from "@/components/star-rating";
 
-// Available preparation topics
-const PREPARATION_TOPICS = [
-  "Behavioral",
-  "Product Thinking", 
-  "Analytical Thinking",
-  "Product Portfolio",
-  "Technical Skills",
-  "Case Studies",
-  "System Design",
-  "Leadership",
-  "Communication",
-  "Market Research"
-];
+interface Topic {
+  id: number;
+  name: string;
+  createdAt: string;
+}
 
 // Single topic entry validation
 const topicEntrySchema = z.object({
@@ -113,6 +105,11 @@ You're building great habits!
 
   const { data: sessions, isLoading } = useQuery<PreparationSession[]>({
     queryKey: ["/api/preparation-sessions"],
+  });
+
+  const { data: topics = [] } = useQuery<Topic[]>({
+    queryKey: ["/api/topics"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   const createSessionsMutation = useMutation({
@@ -560,11 +557,11 @@ You're building great habits!
                           <SelectValue placeholder="Select a topic" />
                         </SelectTrigger>
                         <SelectContent>
-                          {PREPARATION_TOPICS.filter(topic => 
-                            !formData.entries.some((e, i) => i !== index && e.topic === topic)
+                          {topics.filter(topic => 
+                            !formData.entries.some((e, i) => i !== index && e.topic === topic.name)
                           ).map((topic) => (
-                            <SelectItem key={topic} value={topic}>
-                              {topic}
+                            <SelectItem key={topic.id} value={topic.name}>
+                              {topic.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
