@@ -18,13 +18,19 @@ import { db } from "./db";
 import { applications, topics, preparationSessions } from '../shared/schema';
 import { spawn } from 'child_process';
 import path from 'path';
+import { requireSupabaseAuth, getCurrentUserId } from './supabase-auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enable compression
   app.use(compression());
 
-  // Mock user ID for demo purposes - in real app would come from authentication
-  const getCurrentUserId = () => 1;
+  // Helper function to get current user ID from authenticated session
+  const getCurrentUserId = (req: any): number => {
+    if (!req.isAuthenticated() || !req.user) {
+      throw new Error('User not authenticated');
+    }
+    return req.user.id;
+  };
 
   // Company logo API endpoint
   app.get("/api/company-logo/:company", async (req, res) => {
@@ -122,9 +128,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   })
 
   // Applications endpoints
-  app.get("/api/applications", async (req, res) => {
+  app.get("/api/applications", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const page = Math.max(0, parseInt(req.query.page as string) || 0);
       const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit as string) || 50));
       const interviewing = req.query.interviewing === "true";
@@ -179,9 +185,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/applications", async (req, res) => {
+  app.post("/api/applications", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       
       // Remove id field if it exists to prevent conflicts
       const { id, ...bodyData } = req.body;
@@ -223,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/applications/:id", async (req, res) => {
+  app.put("/api/applications/:id", requireSupabaseAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       let data = { ...req.body };
@@ -242,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const application = await storage.updateApplication(id, validatedData);
       
       // Invalidate applications cache for this user
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       await cache.invalidatePattern(`applications:${userId}:*`);
       
       res.json(application);
@@ -255,13 +261,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/applications/:id", async (req, res) => {
+  app.delete("/api/applications/:id", requireSupabaseAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteApplication(id);
       
       // Invalidate applications cache for this user
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       await cache.invalidatePattern(`applications:${userId}:*`);
       
       res.status(204).send();
@@ -271,9 +277,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Preparation sessions endpoints
-  app.get("/api/preparation-sessions", async (req, res) => {
+  app.get("/api/preparation-sessions", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const sessions = await storage.getPreparationSessions(userId);
       res.json(sessions);
     } catch (error) {
@@ -281,9 +287,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/preparation-sessions", async (req, res) => {
+  app.post("/api/preparation-sessions", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const validatedData = insertPreparationSessionSchema.parse({
         ...req.body,
         userId,
@@ -301,7 +307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/preparation-sessions/:id", async (req, res) => {
+  app.put("/api/preparation-sessions/:id", requireSupabaseAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertPreparationSessionSchema.partial().parse(req.body);
@@ -317,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/preparation-sessions/:id", async (req, res) => {
+  app.delete("/api/preparation-sessions/:id", requireSupabaseAuth, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deletePreparationSession(id);
@@ -328,9 +334,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Topics endpoints
-  app.get("/api/topics", async (req, res) => {
+  app.get("/api/topics", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       
       // Try cache first
       const cacheKey = cache.generateKey('topics', userId.toString());
@@ -388,9 +394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/topics", async (req, res) => {
+  app.post("/api/topics", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const validatedData = insertTopicSchema.parse({
         ...req.body,
         userId
@@ -429,9 +435,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/topics/:id", async (req, res) => {
+  app.delete("/api/topics/:id", requireSupabaseAuth, async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const topicId = parseInt(req.params.id);
 
       // Check if topic exists and belongs to user
@@ -483,7 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Interviews endpoints
   app.get("/api/interviews", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const interviews = await storage.getInterviews(userId);
       res.json(interviews);
     } catch (error) {
@@ -493,7 +499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/interviews", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const validatedData = insertInterviewSchema.parse({
         ...req.body,
         userId
@@ -539,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Assessments endpoints
   app.get("/api/assessments", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const assessments = await storage.getAssessments(userId);
       res.json(assessments);
     } catch (error) {
@@ -549,7 +555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/assessments", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const validatedData = insertAssessmentSchema.parse({
         ...req.body,
         userId
@@ -595,7 +601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard analytics endpoints
   app.get("/api/dashboard/stats", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const stats = await storage.getDashboardStats(userId);
       res.json(stats);
     } catch (error) {
@@ -605,7 +611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/prep-time", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const prepTime = await storage.getWeeklyPrepTime(userId);
       res.json(prepTime);
     } catch (error) {
@@ -615,7 +621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/confidence-trends", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const confidenceTrends = await storage.getConfidenceTrends(userId);
       res.json(confidenceTrends);
     } catch (error) {
@@ -626,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reminders endpoints
   app.get("/api/reminders", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const reminders = await storage.getReminders(userId);
       res.json(reminders);
     } catch (error) {
@@ -636,7 +642,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/reminders", async (req, res) => {
     try {
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const validatedData = insertReminderSchema.parse({
         ...req.body,
         userId
@@ -666,7 +672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } = req.body;
       
       const settings = {
-        userId: getCurrentUserId(),
+        userId: getCurrentUserId(req),
         email,
         enableDailyReminders,
         enableCongratulations,
@@ -678,9 +684,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Save to notification scheduler
       const { saveEmailSettings } = await import('./notification-scheduler');
-      saveEmailSettings(getCurrentUserId(), req.body);
+      saveEmailSettings(getCurrentUserId(req), req.body);
       
-      console.log('✅ Email settings saved for user:', getCurrentUserId());
+      console.log('✅ Email settings saved for user:', getCurrentUserId(req));
       res.json({ success: true, settings });
     } catch (error) {
       console.error("Error saving email settings:", error);
@@ -725,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sendPrepReminder, checkMissedPreparation } = await import('./email-service');
       
-      const userId = getCurrentUserId();
+      const userId = getCurrentUserId(req);
       const sessions = await storage.getPreparationSessions(userId);
       const user = await storage.getUser(userId);
       

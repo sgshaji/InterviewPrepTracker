@@ -21,6 +21,7 @@ import ApplicationFunnelChart from "@/components/charts/application-funnel-chart
 import { Application, Interview, PreparationSession } from "@shared/schema";
 import { useNavigate } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, isWithinInterval, addDays, differenceInDays } from "date-fns";
+import { api } from "@/utils/api";
 
 // Direct Clearbit logo component matching applications page
 function DirectCompanyLogo({ companyName }: { companyName: string }) {
@@ -153,25 +154,24 @@ export default function Dashboard() {
   
   const { data: stats } = useQuery<DashboardStats>({
     queryKey: ["/api/dashboard/stats"],
-    queryFn: async () => {
-      const res = await fetch("/api/dashboard/stats");
-      if (!res.ok) throw new Error("Failed to fetch dashboard stats");
-      return res.json();
-    },
+    queryFn: () => api.get<DashboardStats>("/dashboard/stats"),
   });
 
   const { data: applicationsData } = useQuery<{ totalCount: number; applications: Application[] }>({
     queryKey: ["/api/applications"],
+    queryFn: () => api.get<{ totalCount: number; applications: Application[] }>("/applications"),
   });
 
   const applications = applicationsData?.applications || [];
 
   const { data: interviews } = useQuery<(Interview & { application: Application })[]>({
     queryKey: ["/api/interviews"],
+    queryFn: () => api.get<(Interview & { application: Application })[]>("/interviews"),
   });
 
   const { data: sessions } = useQuery<PreparationSession[]>({
     queryKey: ["/api/preparation-sessions"],
+    queryFn: () => api.get<PreparationSession[]>("/preparation-sessions"),
   });
 
   // Calculate real-time insights
