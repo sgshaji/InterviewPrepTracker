@@ -42,7 +42,7 @@ class CacheService {
     }
   }
 
-  async get(key: string) {
+  async get<T = any>(key: string): Promise<T | null> {
     if (!this.isConnected || !this.redis) return null;
     try {
       return await this.redis.get(key);

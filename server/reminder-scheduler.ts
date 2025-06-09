@@ -7,8 +7,13 @@ export async function checkDailyReminders() {
     console.log('Checking daily preparation reminders...');
     
     // In a real app, you'd get all users with email alerts enabled
-    // For now, we'll use the current user (ID: 1)
-    const userId = 1;
+    // For now, we'll use the first user from the database
+    const users = await storage.getUsers();
+    if (users.length === 0) {
+      console.log('No users found for reminder check');
+      return;
+    }
+    const userId = users[0].id;
     const user = await storage.getUser(userId);
     
     if (!user) {

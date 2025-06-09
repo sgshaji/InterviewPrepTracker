@@ -12,9 +12,9 @@ interface EmailSettings {
 }
 
 // Store for user email settings (in production, this would be in the database)
-const userEmailSettings = new Map<number, EmailSettings>();
+const userEmailSettings = new Map<string, EmailSettings>();
 
-export function saveEmailSettings(userId: number, settings: EmailSettings) {
+export function saveEmailSettings(userId: string, settings: EmailSettings) {
   userEmailSettings.set(userId, settings);
   console.log(`📧 Email settings saved for user ${userId}:`, {
     email: settings.email,
@@ -24,7 +24,7 @@ export function saveEmailSettings(userId: number, settings: EmailSettings) {
   });
 }
 
-export function getEmailSettings(userId: number): EmailSettings | undefined {
+export function getEmailSettings(userId: string): EmailSettings | undefined {
   return userEmailSettings.get(userId);
 }
 

@@ -52,24 +52,50 @@ export function setupSupabaseAuth(app: Express) {
         console.log(`✅ Created new user: ${email} (Local ID: ${localUser.id})`);
       } else {
         // Update existing user info if needed
-        if (localUser.name !== name && name) {
-          // Could add an update method to storage if needed
-          console.log(`ℹ️ User exists: ${email} (Local ID: ${localUser.id})`);
+        const updates: Partial<LocalUser> = {};
+        let needsUpdate = false;
+        
+        if (name && localUser.name !== name) {
+          updates.name = name;
+          needsUpdate = true;
+        }
+        
+        // Add more fields to update as needed
+        if (avatar && localUser.avatar !== avatar) {
+          updates.avatar = avatar;
+          needsUpdate = true;
+        }
+        
+        if (needsUpdate) {
+          try {
+            localUser = await storage.updateUser(localUser.id, updates);
+            console.log(`🔄 Updated user ${localUser.id} with new information`);
+          } catch (error) {
+            console.error('Error updating user:', error);
+            // Continue with existing user data if update fails
+          }
         }
       }
 
+      if (!localUser) {
+        throw new Error('Failed to create or retrieve user');
+      }
+      
       // Store Supabase ID mapping for future reference
       // You might want to add a supabase_id column to your users table
       
-      res.json({
+      const userResponse = {
         id: localUser.id,
         username: localUser.username,
         email: localUser.email,
         name: localUser.name,
         role: localUser.role,
         subscriptionStatus: localUser.subscriptionStatus,
+        avatar: localUser.avatar,
         supabaseId
-      });
+      };
+      
+      res.json(userResponse);
 
     } catch (error) {
       console.error('Error syncing user:', error);
@@ -78,7 +104,7 @@ export function setupSupabaseAuth(app: Express) {
   });
 
   // Auth callback handler (for OAuth redirects)
-  app.get("/auth/callback", (req, res) => {
+  app.get("/auth/callback", (_, res) => {
     // Redirect to the main app after OAuth
     res.redirect("/");
   });
@@ -108,9 +134,8 @@ export async function requireSupabaseAuth(req: any, res: any, next: any) {
       return res.status(401).json({ error: 'User not found in local database' });
     }
 
-    // Attach user info to request
-    req.user = localUser;
-    req.supabaseUser = supabaseUser;
+    // Make sure using the Supabase user ID
+    req.userId = supabaseUser.id;
     
     next();
   } catch (error) {
@@ -120,9 +145,13 @@ export async function requireSupabaseAuth(req: any, res: any, next: any) {
 }
 
 // Helper function to get current user ID from request
-export function getCurrentUserId(req: any): number {
-  if (!req.user) {
-    throw new Error('User not authenticated');
+export function getCurrentUserId(req: any): string {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    throw new Error('No token provided');
   }
-  return req.user.id;
-} 
+  
+  // In a real implementation, you would verify the JWT and extract the user ID
+  // For now, we'll return a placeholder
+  return req.user?.id || ''; // Return authenticated user's ID or empty string if not found
+}

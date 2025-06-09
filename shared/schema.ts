@@ -1,14 +1,15 @@
-import { pgTable, text, serial, integer, boolean, timestamp, date, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, date, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
+  avatar: text("avatar"),
   role: text("role"),
   isAdmin: boolean("is_admin").notNull().default(false),
   subscriptionStatus: text("subscription_status").notNull().default("inactive"), // inactive, active, canceled
@@ -18,8 +19,11 @@ export const users = pgTable("users", {
 });
 
 export const applications = pgTable("applications", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(
+    () => users.id,
+    { onDelete: 'cascade' }
+  ),
   dateApplied: date("date_applied").notNull(),
   companyName: text("company_name").notNull(),
   roleTitle: text("role_title").notNull(),
@@ -34,15 +38,21 @@ export const applications = pgTable("applications", {
 });
 
 export const topics = pgTable("topics", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(
+    () => users.id,
+    { onDelete: 'cascade' }
+  ),
   name: text("name").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const preparationSessions = pgTable("preparation_sessions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(
+    () => users.id,
+    { onDelete: 'cascade' }
+  ),
   date: date("date").notNull(),
   topic: text("topic").notNull(), // Reference to topic name
   resourceLink: text("resource_link"),
@@ -52,9 +62,15 @@ export const preparationSessions = pgTable("preparation_sessions", {
 });
 
 export const interviews = pgTable("interviews", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  applicationId: integer("application_id").notNull().references(() => applications.id),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(
+    () => users.id,
+    { onDelete: 'cascade' }
+  ),
+  applicationId: text("application_id").notNull().references(
+    () => applications.id,
+    { onDelete: 'cascade' }
+  ),
   interviewStage: text("interview_stage").notNull(), // HR Round, HM Round, Panel, Case Study, etc.
   interviewDate: timestamp("interview_date"),
   status: text("status").notNull().default("Scheduled"), // Scheduled, Completed, Cancelled
@@ -67,9 +83,15 @@ export const interviews = pgTable("interviews", {
 });
 
 export const assessments = pgTable("assessments", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  interviewId: integer("interview_id").notNull().references(() => interviews.id),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(
+    () => users.id,
+    { onDelete: 'cascade' }
+  ),
+  interviewId: text("interview_id").notNull().references(
+    () => interviews.id,
+    { onDelete: 'cascade' }
+  ),
   score: integer("score"), // 1-5
   difficultyLevel: text("difficulty_level"),
   whatWentWell: text("what_went_well"),
@@ -82,8 +104,11 @@ export const assessments = pgTable("assessments", {
 });
 
 export const reminders = pgTable("reminders", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(
+    () => users.id,
+    { onDelete: 'cascade' }
+  ),
   type: text("type").notNull(), // follow-up, prep, assessment
   title: text("title").notNull(),
   description: text("description"),
