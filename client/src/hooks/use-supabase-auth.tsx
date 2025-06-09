@@ -2,12 +2,26 @@ import { createContext, ReactNode, useContext, useEffect, useState } from "react
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { User as LocalUser } from "@shared/schema";
+
+// Define a simplified user type based on auth.users
+type LocalUser = {
+  id: string;
+  email?: string;
+  username?: string;
+  fullName?: string;
+  avatar?: string;
+  role?: string;
+  subscriptionStatus?: string;
+  email_confirmed_at?: Date | null;
+  created_at?: Date;
+  updated_at?: Date;
+};
 
 type AuthContextType = {
   user: LocalUser | null;
   supabaseUser: SupabaseUser | null;
   isLoading: boolean;
+  isAuthLoaded: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -21,55 +35,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LocalUser | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthLoaded, setIsAuthLoaded] = useState(false);
   const { toast } = useToast();
 
-  // Sync Supabase user with local database
-  const syncUserWithDatabase = async (supabaseUser: SupabaseUser) => {
-    try {
-      const session = await supabase.auth.getSession();
-      const token = session.data.session?.access_token;
-      
-      if (!token) {
-        console.error('❌ No access token available for sync');
-        return;
-      }
-
-      console.log('🔄 Syncing user with database:', {
-        email: supabaseUser.email,
-        id: supabaseUser.id,
-        hasToken: !!token
-      });
-
-      const response = await fetch('/api/auth/sync-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || 'User',
-          avatar: supabaseUser.user_metadata?.avatar_url,
-          provider: supabaseUser.app_metadata?.provider
-        })
-      });
-
-      console.log('📡 Sync response status:', response.status);
-
-      if (response.ok) {
-        const localUser = await response.json();
-        console.log('✅ Local user created/updated:', localUser.email);
-        setUser(localUser);
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Failed to sync user with database:', response.status, errorText);
-        // Don't throw error - let auth continue even if sync fails
-      }
-    } catch (error) {
-      console.error('💥 Error syncing user:', error);
-      // Don't throw error - let auth continue even if sync fails
-    }
+  // Convert Supabase user to local user format
+  const convertSupabaseUser = (supabaseUser: SupabaseUser): LocalUser => {
+    const username = supabaseUser.user_metadata?.preferred_username || 
+                     supabaseUser.user_metadata?.username ||
+                     supabaseUser.email?.split('@')[0] || 
+                     'user';
+    
+    const fullName = supabaseUser.user_metadata?.full_name || 
+                     supabaseUser.user_metadata?.name || 
+                     supabaseUser.email?.split('@')[0] || 
+                     'User';
+    
+    const subscriptionStatus = supabaseUser.email === 'sgshaji@gmail.com' ? 'active' : 'inactive';
+    
+    return {
+      id: supabaseUser.id,
+      email: supabaseUser.email,
+      username,
+      fullName,
+      avatar: supabaseUser.user_metadata?.avatar_url || null,
+      role: 'user',
+      subscriptionStatus,
+      email_confirmed_at: supabaseUser.email_confirmed_at ? new Date(supabaseUser.email_confirmed_at) : null,
+      created_at: supabaseUser.created_at ? new Date(supabaseUser.created_at) : new Date(),
+      updated_at: supabaseUser.updated_at ? new Date(supabaseUser.updated_at) : new Date()
+    };
   };
 
   // Initialize auth state
@@ -98,13 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (session?.user && mounted) {
           setSupabaseUser(session.user);
-          await syncUserWithDatabase(session.user);
+          setUser(convertSupabaseUser(session.user));
         }
       } catch (error) {
         console.error('❌ Error initializing auth:', error);
       } finally {
         if (mounted) {
           setIsLoading(false);
+          setIsAuthLoaded(true);
         }
       }
     };
@@ -136,14 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         
         if (session?.user) {
-          console.log('👤 Valid session found, syncing user:', session.user.email);
+          console.log('👤 Valid session found, setting user:', session.user.email);
           setSupabaseUser(session.user);
-          try {
-            await syncUserWithDatabase(session.user);
-            console.log('✅ User sync completed');
-          } catch (error) {
-            console.error('❌ Failed to sync user:', error);
-          }
+          setUser(convertSupabaseUser(session.user));
+          console.log('✅ User set from auth.users');
         } else {
           console.log('🚫 No valid session');
           setSupabaseUser(null);
@@ -198,8 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (error: any) {
       toast({
-        title: "Sign in failed",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to sign in",
         variant: "destructive",
       });
       throw error;
@@ -217,6 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             full_name: fullName,
+            name: fullName,
           },
         },
       });
@@ -224,13 +216,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
 
       toast({
-        title: "Check your email",
-        description: "We've sent you a confirmation link to complete your registration.",
+        title: "Account created!",
+        description: "Please check your email to verify your account.",
       });
     } catch (error: any) {
       toast({
-        title: "Sign up failed",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       });
       throw error;
@@ -243,17 +235,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/`
-        }
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
 
       if (error) throw error;
     } catch (error: any) {
       toast({
-        title: "Google sign in failed",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to sign in with Google",
         variant: "destructive",
       });
       throw error;
@@ -264,63 +256,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
-      setUser(null);
-      setSupabaseUser(null);
-      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully.",
       });
     } catch (error: any) {
       toast({
-        title: "Sign out failed",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to sign out",
         variant: "destructive",
       });
+      throw error;
+    } finally {
+      setIsLoading(false);
+      setUser(null);
+      setSupabaseUser(null);
     }
   };
 
   const resetPassword = async (email: string) => {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
 
       if (error) throw error;
 
       toast({
-        title: "Password reset sent",
+        title: "Password reset email sent",
         description: "Check your email for the password reset link.",
       });
     } catch (error: any) {
       toast({
-        title: "Password reset failed",
-        description: error.message,
+        title: "Error",
+        description: error.message || "Failed to send reset email",
         variant: "destructive",
       });
       throw error;
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        supabaseUser,
-        isLoading,
-        signIn,
-        signUp,
-        signInWithGoogle,
-        signOut,
-        resetPassword,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    supabaseUser,
+    isLoading,
+    isAuthLoaded,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signOut,
+    resetPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useSupabaseAuth() {

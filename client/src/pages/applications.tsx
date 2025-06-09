@@ -1,18 +1,13 @@
 "use client"
 
-import { useLocation } from "react-router-dom"
-import { useMemo } from "react"
+import { useSearchParams } from "react-router-dom"
+import { useEffect } from "react"
 import { useApplications } from "../hooks/use-applications"
-import ApplicationTable from "../components/application-table"
-
-function useQuery() {
-  const { search } = useLocation();
-  return useMemo(() => new URLSearchParams(search), [search]);
-}
+import ModernApplicationTable from "../components/modern-application-table-final"
 
 export default function ApplicationsPage() {
-  const query = useQuery()
-  const interviewing = query.get("interviewing") === "true"
+  const [searchParams] = useSearchParams()
+  const interviewing = searchParams.get("interviewing") === "true"
   
   const {
     applications,
@@ -28,38 +23,35 @@ export default function ApplicationsPage() {
     deleteApplication
   } = useApplications()
 
-  // Set interviewing filter from URL params
-  useMemo(() => {
+  useEffect(() => {
     if (interviewing !== filters.interviewing) {
-      setFilters({ interviewing })
+      setFilters({ ...filters, interviewing })
     }
-  }, [interviewing, filters.interviewing, setFilters])
+  }, [interviewing, filters, setFilters])
 
-  const handleEdit = async (id: string, field: string, value: string) => {
-    await updateApplication(id, field, value)
-  }
-
-  const handleDelete = async (id: string) => {
-    await deleteApplication(id)
-  }
+  const handleUpdateApplication = async (id: string, field: string, value: string) => {
+    await updateApplication(id, { [field]: value });
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-[1400px] mx-auto p-6">
-        <ApplicationTable
-          applications={applications}
-          loading={loading}
-          error={error}
-          totalCount={totalCount}
-          filters={filters}
-          onFiltersChange={setFilters}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAddNew={addApplication}
-          onLoadMore={loadMore}
-          hasMore={hasMore}
-        />
+    <div className="space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">My Job Applications ({totalCount})</h1>
       </div>
+      
+      <ModernApplicationTable
+        applications={applications}
+        loading={loading}
+        error={error}
+        totalCount={totalCount}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onEdit={handleUpdateApplication}
+        onDelete={deleteApplication}
+        onAddNew={addApplication}
+        onLoadMore={loadMore}
+        hasMore={hasMore}
+      />
     </div>
   )
 }

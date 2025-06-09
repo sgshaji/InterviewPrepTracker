@@ -1,14 +1,18 @@
-import { type NextApiRequest, type NextApiResponse } from "next";
+// client/src/api/applications/updateApplication.ts
+
+import { authorizedFetch } from "@/api/authorizedFetch";
+import { type Request, type Response } from "express";
 import { db } from "@/lib/db";
 import { applications } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { updateApplicationSchema } from "@shared/schema";
 
-export async function updateApplication(data: { id: number; [key: string]: any }) {
+// ✅ Client-side function to call the API
+export async function updateApplication(data: { id: string; [key: string]: any }) {
   try {
-    const response = await fetch('/api/applications/updateApplication', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authorizedFetch("/api/applications/updateApplication", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     const result = await response.json();
@@ -17,13 +21,14 @@ export async function updateApplication(data: { id: number; [key: string]: any }
     }
     return { data: result };
   } catch (error) {
-    return { error: 'Failed to update application' };
+    return { error: "Failed to update application" };
   }
 }
 
+// ✅ API route handler to run on the server
 export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+  req: Request,
+  res: Response
 ) {
   if (req.method !== "PUT") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -31,13 +36,13 @@ export default async function handler(
 
   const { id, ...data } = req.body;
 
-  // ID validation: ensure it's a number, not undefined or a stringified number
-  if (typeof id !== "number" || isNaN(id)) {
+  // Validate ID
+  if (typeof id !== "string") {
     return res.status(400).json({ error: "Missing or invalid application ID" });
   }
 
+  // Validate payload with Zod
   const parsed = updateApplicationSchema.safeParse(data);
-
   if (!parsed.success) {
     return res.status(400).json({
       error: "Validation failed",

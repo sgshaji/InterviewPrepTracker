@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { cache } from "./cache";
@@ -18,22 +18,21 @@ import { db } from "./db";
 import { applications, topics, preparationSessions } from '../shared/schema';
 import { spawn } from 'child_process';
 import path from 'path';
-import { requireSupabaseAuth, getCurrentUserId } from './supabase-auth';
+import { requireAuth, getCurrentUserId } from './supabase-auth';
+
+const numericIdParam = z.object({
+  id: z.preprocess(
+    (val) => parseInt(z.string().parse(val), 10),
+    z.number().positive("ID must be a positive number")
+  ),
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Enable compression
   app.use(compression());
 
-  // Helper function to get current user ID from authenticated session
-  const getCurrentUserId = (req: any): number => {
-    if (!req.isAuthenticated() || !req.user) {
-      throw new Error('User not authenticated');
-    }
-    return req.user.id;
-  };
-
   // Company logo API endpoint
-  app.get("/api/company-logo/:company", async (req, res) => {
+  app.get("/api/company-logo/:company", async (req: Request, res: Response) => {
     try {
       const companyName = decodeURIComponent(req.params.company);
       if (!companyName || companyName.trim() === '') {
@@ -113,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Company logo endpoint with caching
-  app.get('/api/logo/:companyName', async (req, res) => {
+  app.get('/api/logo/:companyName', async (req: Request, res: Response) => {
     try {
       const { CompanyLogoService } = await import('./logo-cache')
       const companyName = decodeURIComponent(req.params.companyName)
@@ -128,9 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   })
 
   // Applications endpoints
-  app.get("/api/applications", requireSupabaseAuth, async (req, res) => {
+  app.get("/api/applications", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
       const page = Math.max(0, parseInt(req.query.page as string) || 0);
       const limit = Math.min(10000, Math.max(1, parseInt(req.query.limit as string) || 50));
       const interviewing = req.query.interviewing === "true";
@@ -185,9 +187,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/applications", requireSupabaseAuth, async (req, res) => {
+  app.post("/api/applications", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
       
       // Remove id field if it exists to prevent conflicts
       const { id, ...bodyData } = req.body;
@@ -229,47 +234,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/applications/:id", requireSupabaseAuth, async (req, res) => {
+  app.put("/api/applications/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      let data = { ...req.body };
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Forbidden" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid application ID", details: validation.error.flatten() });
+      }
+      const applicationId = validation.data.id;
       
-      // Auto-populate "No Callback" stage for Applied status with blank stage
-      if (data.jobStatus === "Applied" && (!data.applicationStage || data.applicationStage.trim() === "")) {
-        data.applicationStage = "No Callback";
+      // Ownership check
+      const existingApplication = await storage.getApplication(applicationId.toString());
+      if (!existingApplication || existingApplication.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden: You do not own this resource" });
+      }
+
+      let dataToUpdate = { ...req.body };
+      if ('id' in dataToUpdate) {
+        delete dataToUpdate.id;
       }
       
       // Auto-sync jobStatus with applicationStage
-      if (data.applicationStage) {
-        data.jobStatus = getStatusForStage(data.applicationStage, data.jobStatus || "Applied");
+      if (dataToUpdate.applicationStage) {
+        dataToUpdate.jobStatus = getStatusForStage(dataToUpdate.applicationStage, dataToUpdate.jobStatus || "Applied");
       }
       
-      const validatedData = insertApplicationSchema.partial().parse(data);
-      const application = await storage.updateApplication(id, validatedData);
+      // Validate and update
+      const validatedUpdateData = insertApplicationSchema.partial().parse(dataToUpdate);
+      const updatedApplication = await storage.updateApplication(applicationId.toString(), validatedUpdateData);
       
-      // Invalidate applications cache for this user
-      const userId = getCurrentUserId(req);
+      // Invalidate relevant cache
       await cache.invalidatePattern(`applications:${userId}:*`);
       
-      res.json(application);
+      res.json(updatedApplication);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid application data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to update application" });
+        return res.status(400).json({ message: "Invalid data", errors: error.errors });
       }
+      res.status(500).json({ message: "Failed to update application" });
     }
   });
 
-  app.delete("/api/applications/:id", requireSupabaseAuth, async (req, res) => {
+  app.delete("/api/applications/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      await storage.deleteApplication(id);
-      
-      // Invalidate applications cache for this user
       const userId = getCurrentUserId(req);
-      await cache.invalidatePattern(`applications:${userId}:*`);
+      if (!userId) {
+        return res.status(401).json({ error: "Forbidden" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid application ID", details: validation.error.flatten() });
+      }
+      const applicationId = validation.data.id;
+
+      // Ownership check
+      const existingApplication = await storage.getApplication(applicationId.toString());
+      if (!existingApplication || existingApplication.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await storage.deleteApplication(applicationId.toString());
       
+      // Invalidate cache
+      await cache.invalidatePattern(`applications:${userId}:*`);
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete application" });
@@ -277,56 +310,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Preparation sessions endpoints
-  app.get("/api/preparation-sessions", requireSupabaseAuth, async (req, res) => {
+  app.get("/api/preparation-sessions", requireAuth, asyncHandler(async (req, res) => {
+    const userId = getCurrentUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+    const topicFilter = req.query.topic as string | undefined;
+
+    const whereClauses = [eq(preparationSessions.userId, userId)];
+    if (topicFilter) {
+      const topicId = parseInt(topicFilter, 10);
+      if (!isNaN(topicId)) {
+        whereClauses.push(eq(preparationSessions.topicId, topicId));
+      }
+    }
+
+    const sessions = await db.select()
+      .from(preparationSessions)
+      .where(and(...whereClauses))
+      .orderBy(desc(preparationSessions.date));
+      
+    res.json(sessions);
+  }));
+
+  app.get("/api/preparation-sessions/by-date", requireAuth, async (req: Request, res: Response) => {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: "startDate and endDate are required" });
+    }
+
     try {
       const userId = getCurrentUserId(req);
-      const sessions = await storage.getPreparationSessions(userId);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      const sessions = await storage.getPreparationSessionsByDateRange(
+        userId,
+        startDate as string,
+        endDate as string
+      );
       res.json(sessions);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch preparation sessions" });
+      res.status(500).json({ error: "Failed to get sessions" });
     }
   });
 
-  app.post("/api/preparation-sessions", requireSupabaseAuth, async (req, res) => {
+  app.post("/api/preparation-sessions", requireAuth, validateDatabaseInput(insertPreparationSessionSchema), asyncHandler(async (req, res) => {
+    const userId = getCurrentUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+    
+    const parsed = insertPreparationSessionSchema.safeParse({ ...req.body, userId });
+
+    if (!parsed.success) {
+      res.status(400).json({ message: "Invalid session data", errors: parsed.error.flatten() });
+      return;
+    }
+    
+    const newSession = await storage.createPreparationSession(parsed.data);
+    res.status(201).json(newSession);
+  }));
+
+  app.put("/api/preparation-sessions/:id", requireAuth, asyncHandler(async (req, res) => {
     try {
       const userId = getCurrentUserId(req);
-      const validatedData = insertPreparationSessionSchema.parse({
-        ...req.body,
-        userId,
-        date: req.body.date || new Date().toISOString().split('T')[0]
-      });
-      
-      const session = await storage.createPreparationSession(validatedData);
-      res.status(201).json(session);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid preparation session data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to create preparation session" });
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
       }
-    }
-  });
 
-  app.put("/api/preparation-sessions/:id", requireSupabaseAuth, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertPreparationSessionSchema.partial().parse(req.body);
-      
-      const session = await storage.updatePreparationSession(id, validatedData);
-      res.json(session);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid preparation session data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to update preparation session" });
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Invalid session ID', details: validation.error.flatten() });
       }
-    }
-  });
+      const sessionId = validation.data.id;
 
-  app.delete("/api/preparation-sessions/:id", requireSupabaseAuth, async (req, res) => {
+      const updatedSession = await storage.updatePreparationSession(sessionId.toString(), req.body);
+      res.json(updatedSession);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update preparation session" });
+    }
+  }));
+
+  app.delete("/api/preparation-sessions/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      await storage.deletePreparationSession(id);
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: 'Invalid session ID', details: validation.error.flatten() });
+      }
+      const sessionId = validation.data.id;
+
+      await storage.deletePreparationSession(sessionId.toString());
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete preparation session" });
@@ -334,111 +413,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Topics endpoints
-  app.get("/api/topics", requireSupabaseAuth, async (req, res) => {
+  app.get("/api/topics", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      
-      // Try cache first
-      const cacheKey = cache.generateKey('topics', userId.toString());
-      const cached = await cache.get(cacheKey);
-      if (cached) {
-        return res.json(cached);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
       }
-
       const userTopics = await db
         .select()
         .from(topics)
         .where(eq(topics.userId, userId))
-        .orderBy(topics.createdAt);
-
-      // If no topics exist, create default ones
-      if (userTopics.length === 0) {
-        const defaultTopics = [
-          "Behavioral",
-          "Product Thinking", 
-          "Analytical Thinking",
-          "Product Portfolio",
-          "Technical Skills",
-          "Case Studies",
-          "System Design",
-          "Leadership",
-          "Communication",
-          "Market Research"
-        ];
-
-        for (const topicName of defaultTopics) {
-          await db.insert(topics).values({
-            userId,
-            name: topicName
-          });
-        }
-
-        // Fetch the newly created topics
-        const newTopics = await db
-          .select()
-          .from(topics)
-          .where(eq(topics.userId, userId))
-          .orderBy(topics.createdAt);
-
-        // Cache for 5 minutes
-        await cache.set(cacheKey, newTopics, 300);
-        res.json(newTopics);
-      } else {
-        // Cache for 5 minutes
-        await cache.set(cacheKey, userTopics, 300);
-        res.json(userTopics);
-      }
+        .orderBy(desc(topics.createdAt));
+      res.json(userTopics);
     } catch (error) {
-      console.error('Topics fetch error:', error);
       res.status(500).json({ message: "Failed to fetch topics" });
     }
   });
 
-  app.post("/api/topics", requireSupabaseAuth, async (req, res) => {
+  app.post("/api/topics", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      const validatedData = insertTopicSchema.parse({
-        ...req.body,
-        userId
-      });
-
-      // Check if topic already exists for this user
-      const existingTopic = await db
-        .select()
-        .from(topics)
-        .where(and(
-          eq(topics.userId, userId),
-          sql`LOWER(${topics.name}) = LOWER(${validatedData.name})`
-        ));
-
-      if (existingTopic.length > 0) {
-        return res.status(400).json({ message: "Topic already exists" });
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
       }
-      
-      const [newTopic] = await db
-        .insert(topics)
-        .values(validatedData)
-        .returning();
+      const data = { ...req.body, userId };
+      const parsed = insertTopicSchema.safeParse(data);
 
-      // Invalidate cache
-      const cacheKey = cache.generateKey('topics', userId.toString());
-      await cache.del(cacheKey);
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid topic data", errors: parsed.error.errors });
+      }
 
+      const [newTopic] = await db.insert(topics).values(parsed.data).returning();
       res.status(201).json(newTopic);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid topic data", errors: error.errors });
-      } else {
-        console.error('Topic creation error:', error);
-        res.status(500).json({ message: "Failed to create topic" });
-      }
+      res.status(500).json({ message: "Failed to create topic" });
     }
   });
 
-  app.delete("/api/topics/:id", requireSupabaseAuth, async (req, res) => {
+  app.delete("/api/topics/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      const topicId = parseInt(req.params.id);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        res.status(400).json({ error: "Invalid topic ID", details: validation.error.flatten() });
+        return;
+      }
+      const topicId = validation.data.id;
 
       // Check if topic exists and belongs to user
       const [topic] = await db
@@ -455,12 +479,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if topic is being used in preparation sessions
       const usedInSessions = await db
-        .select({ count: count() })
-        .from(preparationSessions)
-        .where(and(
-          eq(preparationSessions.userId, userId),
-          eq(preparationSessions.topic, topic.name)
-        ));
+      .select({ count: count() })
+      .from(preparationSessions)
+      .where(and(
+        eq(preparationSessions.userId, userId),
+        eq(preparationSessions.topicId, topicId)
+      ));
+
 
       if (usedInSessions[0].count > 0) {
         return res.status(400).json({ 
@@ -487,17 +512,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Interviews endpoints
-  app.get("/api/interviews", async (req, res) => {
+  app.get("/api/interviews", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      const interviews = await storage.getInterviews(userId);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      const interviews = await storage.getInterviews(userId, req.query);
       res.json(interviews);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch interviews" });
     }
   });
 
-  app.post("/api/interviews", async (req, res) => {
+  app.post("/api/interviews", async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
       const validatedData = insertInterviewSchema.parse({
@@ -516,13 +544,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/interviews/:id", async (req, res) => {
+  app.put("/api/interviews/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertInterviewSchema.partial().parse(req.body);
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Forbidden" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid interview ID", details: validation.error.flatten() });
+      }
+      const interviewId = validation.data.id;
+
+      const data = { ...req.body, userId };
+
+      // Ownership check
+      const existingInterview = await storage.getInterview(interviewId.toString());
+      if (!existingInterview || existingInterview.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       
-      const interview = await storage.updateInterview(id, validatedData);
-      res.json(interview);
+      const updatedInterview = await storage.updateInterview(interviewId.toString(), data);
+      
+      // Invalidate relevant caches
+      if (updatedInterview) {
+        await cache.invalidatePattern(`applications:${userId}:*`);
+        await cache.invalidatePattern(`interviews:${userId}:*`);
+      }
+
+      res.json(updatedInterview);
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid interview data", errors: error.errors });
@@ -532,10 +583,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/interviews/:id", async (req, res) => {
+  app.delete("/api/interviews/:id", async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      await storage.deleteInterview(id);
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Forbidden" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid interview ID", details: validation.error.flatten() });
+      }
+      const interviewId = validation.data.id;
+
+      // Ownership check
+      const existingInterview = await storage.getInterview(interviewId.toString());
+      if (!existingInterview || existingInterview.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await storage.deleteInterview(interviewId.toString());
+
+      // Invalidate relevant caches
+      await cache.invalidatePattern(`applications:${userId}:*`);
+      await cache.invalidatePattern(`interviews:${userId}:*`);
+
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete interview" });
@@ -543,9 +615,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Assessments endpoints
-  app.get("/api/assessments", async (req, res) => {
+  app.get("/api/assessments", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
       const assessments = await storage.getAssessments(userId);
       res.json(assessments);
     } catch (error) {
@@ -553,15 +628,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/assessments", async (req, res) => {
+  app.post("/api/assessments", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      const validatedData = insertAssessmentSchema.parse({
-        ...req.body,
-        userId
-      });
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      // Parse the request body using the main insertion schema.
+      // insertAssessmentSchema should define the expected shape of an assessment from the client.
+      const parsedBody = insertAssessmentSchema.parse(req.body);
+
+      // Construct the final payload for creation, ensuring the authenticated userId is used.
+      // This overrides any userId that might have been in req.body and parsed by the schema,
+      // or adds it if the schema doesn't include userId.
+      const payloadForCreate = {
+        ...parsedBody,
+        userId // This is the non-null userId from getCurrentUserId & check
+      };
       
-      const assessment = await storage.createAssessment(validatedData);
+      const assessment = await storage.createAssessment(payloadForCreate);
       res.status(201).json(assessment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -572,12 +657,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/assessments/:id", async (req, res) => {
+  app.put("/api/assessments/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertAssessmentSchema.partial().parse(req.body);
-      
-      const assessment = await storage.updateAssessment(id, validatedData);
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Forbidden" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid assessment ID", details: validation.error.flatten() });
+      }
+      const assessmentId = validation.data.id;
+
+      // Ownership check
+      const existingAssessment = await storage.getAssessment(assessmentId.toString());
+      if (!existingAssessment || existingAssessment.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      const assessment = await storage.updateAssessment(assessmentId.toString(), { ...req.body, userId });
       res.json(assessment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -588,10 +687,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/assessments/:id", async (req, res) => {
+  app.delete("/api/assessments/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const id = parseInt(req.params.id);
-      await storage.deleteAssessment(id);
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "Forbidden" });
+      }
+
+      const validation = numericIdParam.safeParse(req.params);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Invalid assessment ID", details: validation.error.flatten() });
+      }
+      const assessmentId = validation.data.id;
+
+      // Ownership check
+      const existingAssessment = await storage.getAssessment(assessmentId.toString());
+      if (!existingAssessment || existingAssessment.userId !== userId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+
+      await storage.deleteAssessment(assessmentId.toString());
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Failed to delete assessment" });
@@ -599,9 +714,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard analytics endpoints
-  app.get("/api/dashboard/stats", async (req, res) => {
+  app.get("/api/dashboard/stats", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
       const stats = await storage.getDashboardStats(userId);
       res.json(stats);
     } catch (error) {
@@ -609,19 +727,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/dashboard/prep-time", async (req, res) => {
+  app.get("/api/dashboard/prep-time", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      const prepTime = await storage.getWeeklyPrepTime(userId);
-      res.json(prepTime);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      const weeklyPrepTime = await storage.getWeeklyPrepTime(userId);
+      res.json(weeklyPrepTime);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch prep time data" });
+      res.status(500).json({ message: "Failed to fetch weekly prep time" });
     }
   });
 
-  app.get("/api/dashboard/confidence-trends", async (req, res) => {
+  app.get("/api/dashboard/confidence-trends", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
       const confidenceTrends = await storage.getConfidenceTrends(userId);
       res.json(confidenceTrends);
     } catch (error) {
@@ -629,162 +753,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reminders endpoints
-  app.get("/api/reminders", async (req, res) => {
+  // User settings
+  app.get("/api/user/settings", requireAuth, async (req: Request, res: Response) => {
     try {
       const userId = getCurrentUserId(req);
-      const reminders = await storage.getReminders(userId);
-      res.json(reminders);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch reminders" });
-    }
-  });
-
-  app.post("/api/reminders", async (req, res) => {
-    try {
-      const userId = getCurrentUserId(req);
-      const validatedData = insertReminderSchema.parse({
-        ...req.body,
-        userId
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+      // This is a placeholder. You'd fetch user-specific settings from your DB.
+      // Since we removed the custom users table, you might store settings in a
+      // new 'user_settings' table linked by userId, or in Supabase's user_metadata.
+      res.json({
+        id: userId,
+        // email: user.email, // Can't get this easily on server without another lookup
+        notifications: true,
+        theme: "light",
       });
-      
-      const reminder = await storage.createReminder(validatedData);
-      res.status(201).json(reminder);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid reminder data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to create reminder" });
-      }
+      res.status(500).json({ message: "Failed to fetch user settings" });
     }
   });
 
-  // Email notification endpoints
-  app.post("/api/email-settings", async (req, res) => {
+  app.put("/api/user/settings", requireAuth, async (req: Request, res: Response) => {
     try {
-      const { 
-        email, 
-        enableDailyReminders, 
-        enableCongratulations, 
-        reminderTimes, 
-        reminderTemplate, 
-        congratsTemplate 
-      } = req.body;
-      
-      const settings = {
-        userId: getCurrentUserId(req),
-        email,
-        enableDailyReminders,
-        enableCongratulations,
-        reminderTimes,
-        reminderTemplate,
-        congratsTemplate,
-        createdAt: new Date().toISOString()
-      };
-      
-      // Save to notification scheduler
-      const { saveEmailSettings } = await import('./notification-scheduler');
-      saveEmailSettings(getCurrentUserId(req), req.body);
-      
-      console.log('✅ Email settings saved for user:', getCurrentUserId(req));
-      res.json({ success: true, settings });
-    } catch (error) {
-      console.error("Error saving email settings:", error);
-      res.status(500).json({ success: false, error: "Failed to save email settings" });
-    }
-  });
-
-  // Test email endpoint
-  app.post("/api/test-email", async (req, res) => {
-    try {
-      const { email } = req.body;
-      
-      if (!email) {
-        return res.status(400).json({ success: false, error: "Email is required" });
-      }
-
-      const { sendEmail } = await import('./email-service');
-      const success = await sendEmail({
-        to: email,
-        from: 'noreply@yourapp.com',
-        subject: '🧪 Test Email from Interview Prep Dashboard',
-        text: `Hello!\n\nThis is a test email from your Interview Preparation Dashboard.\n\nIf you're receiving this, your email notifications are working perfectly!\n\nBest regards,\nInterview Prep Team`,
-        html: `
-          <h2>🧪 Test Email Success!</h2>
-          <p>Hello!</p>
-          <p>This is a test email from your <strong>Interview Preparation Dashboard</strong>.</p>
-          <p>If you're receiving this, your email notifications are working perfectly!</p>
-          <br>
-          <p>Best regards,<br>
-          <strong>Interview Prep Team</strong></p>
-        `
-      });
-
-      res.json({ success });
-    } catch (error) {
-      console.error("Test email error:", error);
-      res.status(500).json({ success: false, error: "Failed to send email" });
-    }
-  });
-
-  app.post("/api/check-prep-reminders", async (req, res) => {
-    try {
-      const { sendPrepReminder, checkMissedPreparation } = await import('./email-service');
-      
       const userId = getCurrentUserId(req);
-      const sessions = await storage.getPreparationSessions(userId);
-      const user = await storage.getUser(userId);
-      
-      // Get today's date
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Default prep topics (in real app, these would be user-configurable)
-      const prepTopics = ["Behavioral", "Product Thinking", "Analytical Thinking", "Product Portfolio"];
-      
-      // Check for missing preparation
-      const missingCategories = checkMissedPreparation(sessions, prepTopics, today);
-      
-      if (missingCategories.length > 0) {
-        // In a real app, you'd get these from stored user settings
-        const defaultEmailSettings = {
-          email: req.body.email || 'user@example.com',
-          template: req.body.template || `Subject: Missing Preparation Entry for {date}
-
-Hi {userName},
-
-We noticed you haven't filled in your preparation log for today, {date}. Here's what's missing:
-
-{missingCategories}
-
-Take 5 minutes to reflect and fill in your prep log to stay consistent.
-
-You've got this!
-– Interview Prep Tracker`
-        };
-        
-        const success = await sendPrepReminder({
-          userName: user?.username || 'there',
-          email: defaultEmailSettings.email,
-          date: today,
-          missingCategories,
-          template: defaultEmailSettings.template
-        });
-        
-        res.json({ 
-          success, 
-          missingCategories, 
-          message: success ? 'Reminder email sent successfully' : 'Failed to send reminder email'
-        });
-      } else {
-        res.json({ 
-          success: true, 
-          missingCategories: [], 
-          message: 'All preparation categories completed for today' 
-        });
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
       }
+      const settings = req.body;
+      // Placeholder for updating user settings.
+      console.log(`Updating settings for user ${userId}:`, settings);
+      res.json({ message: "Settings updated successfully" });
     } catch (error) {
-      console.error("Error checking prep reminders:", error);
-      res.status(500).json({ error: "Failed to check prep reminders" });
+      res.status(500).json({ message: "Failed to update user settings" });
+    }
+  });
+
+  app.get("/api/preparation-sessions/summary", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = getCurrentUserId(req);
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      const summary = await db
+        .select({
+          topic: preparationSessions.topicId,
+          count: count(preparationSessions.id),
+          latestDate: sql`MAX(${preparationSessions.date})`.as('latestDate'),
+          avgConfidence: sql`AVG(${preparationSessions.confidenceScore})`.as('avgConfidence')
+        })
+        .from(preparationSessions)
+        .where(eq(preparationSessions.userId, userId))
+        .groupBy(preparationSessions.topicId)
+        .orderBy(desc(sql`MAX(${preparationSessions.date})`));
+
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get preparation summary" });
     }
   });
 

@@ -1,3 +1,4 @@
+import { authorizedFetch } from "@/api/authorizedFetch";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PreparationSession } from "@shared/schema";
@@ -14,6 +15,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // Default preparation topics for initial setup
 const DEFAULT_TOPICS = [
@@ -30,7 +32,7 @@ const DEFAULT_TOPICS = [
 ];
 
 interface Topic {
-  id: number;
+  id: string;
   name: string;
   createdAt: string;
 }
@@ -110,7 +112,11 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
   // Update mutation
   const updateSessionMutation = useMutation({
     mutationFn: async (session: PreparationSession) => {
-      return await apiRequest("PUT", `/api/preparation-sessions/${session.id}`, session);
+      return await authorizedFetch(`/api/preparation-sessions/${session.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(session),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/preparation-sessions"] });
@@ -133,7 +139,9 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
   // Delete mutation
   const deleteSessionMutation = useMutation({
     mutationFn: async (sessionId: number) => {
-      return await apiRequest("DELETE", `/api/preparation-sessions/${sessionId}`);
+      return await authorizedFetch(`/api/preparation-sessions/${sessionId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/preparation-sessions"] });
@@ -154,7 +162,11 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
   // Topic mutations
   const createTopicMutation = useMutation({
     mutationFn: async (name: string) => {
-      return await apiRequest("POST", "/api/topics", { name });
+      return await authorizedFetch("/api/topics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/topics"] });
@@ -174,8 +186,10 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
   });
 
   const deleteTopicMutation = useMutation({
-    mutationFn: async (topicId: number) => {
-      return await apiRequest("DELETE", `/api/topics/${topicId}`);
+    mutationFn: async (topicId: string) => {
+      return await authorizedFetch(`/api/topics/${topicId}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/topics"] });
@@ -278,7 +292,7 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
     await createTopicMutation.mutateAsync(newTopicName);
   };
 
-  const handleDeleteTopic = (topicId: number, topicName: string) => {
+  const handleDeleteTopic = (topicId: string, topicName: string) => {
     // Check if topic is being used in any sessions
     const isTopicInUse = sessions.some(session => session.topic === topicName);
     
@@ -291,7 +305,7 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
       return;
     }
 
-    setDeleteTarget({ type: 'topic', id: topicId, name: topicName });
+    setDeleteTarget({ type: 'topic', id: 0, name: topicName });
     setShowDeleteConfirm(true);
   };
 
@@ -302,7 +316,7 @@ export default function DailyPrepTable({ sessions, isLoading }: DailyPrepTablePr
       if (deleteTarget.type === 'session') {
         await deleteSessionMutation.mutateAsync(deleteTarget.id);
       } else {
-        await deleteTopicMutation.mutateAsync(deleteTarget.id);
+        await deleteTopicMutation.mutateAsync(deleteTarget.id as string);
       }
     } finally {
       setShowDeleteConfirm(false);

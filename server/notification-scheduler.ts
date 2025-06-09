@@ -63,11 +63,8 @@ export async function checkAndSendDailyNotifications() {
         continue;
       }
 
-      // Get user info
-      const user = await storage.getUser(userId);
-      if (!user) {
-        continue;
-      }
+      // Note: User info now comes from Supabase auth.users
+      const user = { username: 'User' }; // Placeholder until Supabase auth integration
 
       // Send congratulations if all categories are completed
       if (settings.enableCongratulations && completedCategories.length === PREPARATION_TOPICS.length && missedCategories.length === 0) {

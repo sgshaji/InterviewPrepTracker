@@ -1,3 +1,8 @@
+// REMINDER SCHEDULER - TEMPORARILY DISABLED
+// This file needs to be updated to work with Supabase auth.users instead of the legacy user table
+// The logic for getting users needs to be redesigned since we no longer have getUsers() function
+
+/*
 import { sendPrepReminder, checkMissedPreparation } from './email-service';
 import { storage } from './storage';
 
@@ -72,3 +77,9 @@ You've got this!
 
 // You can call this function manually or set up a cron job
 // For testing: checkDailyReminders();
+*/
+
+// Export empty function to prevent import errors
+export async function checkDailyReminders() {
+  console.log('Reminder scheduler temporarily disabled - needs to be updated for Supabase auth.users');
+}

@@ -46,20 +46,29 @@ async function testDatabaseConnection() {
     // Test data in key tables
     console.log('\n3. Checking data in key tables...');
     
-    // Check users table
-    const users = await pool.query('SELECT COUNT(*) as count FROM users');
-    console.log(`Users count: ${users.rows[0].count}`);
-
     // Check applications table
     const applications = await pool.query('SELECT COUNT(*) as count FROM applications');
     console.log(`Applications count: ${applications.rows[0].count}`);
 
-    // Check stages table
-   // const stages = await pool.query('SELECT COUNT(*) as count FROM stages');
-   // console.log(`Stages count: ${stages.rows[0].count}`);
+    // Check preparation_sessions table
+    const prepSessions = await pool.query('SELECT COUNT(*) as count FROM preparation_sessions');
+    console.log(`Preparation sessions count: ${prepSessions.rows[0].count}`);
+
+    // Check interviews table
+    const interviews = await pool.query('SELECT COUNT(*) as count FROM interviews');
+    console.log(`Interviews count: ${interviews.rows[0].count}`);
+
+    // Check assessments table
+    const assessments = await pool.query('SELECT COUNT(*) as count FROM assessments');
+    console.log(`Assessments count: ${assessments.rows[0].count}`);
+
+    // Check reminders table
+    const reminders = await pool.query('SELECT COUNT(*) as count FROM reminders');
+    console.log(`Reminders count: ${reminders.rows[0].count}`);
 
     await pool.end();
     console.log('\n✅ All database checks completed successfully!');
+    console.log('\n📝 Note: User data is now managed through Supabase auth.users table');
     
   } catch (error) {
     console.error('\n❌ Database test failed:', error);

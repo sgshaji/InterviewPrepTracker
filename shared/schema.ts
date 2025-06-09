@@ -1,98 +1,78 @@
-import { pgTable, text, integer, boolean, timestamp, date, decimal } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-import { relations } from "drizzle-orm";
+import { pgTable, uuid, text, timestamp, integer, boolean, date, serial } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
 
-export const users = pgTable("users", {
-  id: text("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  name: text("name").notNull(),
-  avatar: text("avatar"),
-  role: text("role"),
-  isAdmin: boolean("is_admin").notNull().default(false),
-  subscriptionStatus: text("subscription_status").notNull().default("inactive"), // inactive, active, canceled
-  stripeCustomerId: text("stripe_customer_id"),
-  subscriptionId: text("subscription_id"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// This is a reference to the auth.users table managed by Supabase Auth
+export const authUsers = pgTable('auth.users', {
+  id: uuid('id').primaryKey(),
+  email: text('email'),
+  // Add other Supabase-managed columns if needed for relations
 });
 
+// Zod schema for the User, ensuring the ID is treated as a UUID string.
+export const userSchema = createSelectSchema(authUsers, {
+  id: z.string().uuid("Invalid UUID for user ID"),
+});
+export const insertUserSchema = createInsertSchema(authUsers, {
+  id: z.string().uuid("Invalid UUID for user ID"),
+});
+
+// APPLICATION TRACKING
 export const applications = pgTable("applications", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(
-    () => users.id,
-    { onDelete: 'cascade' }
-  ),
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
   dateApplied: date("date_applied").notNull(),
   companyName: text("company_name").notNull(),
   roleTitle: text("role_title").notNull(),
   roleUrl: text("role_url"),
-  jobStatus: text("job_status").notNull().default("Applied"), // Applied, In Progress, Rejected, Offer
-  applicationStage: text("application_stage").notNull().default("In Review"), // In Review, HR Round, HM Round, Case Study, Panel, Offer, Rejected
+  jobStatus: text("job_status").notNull().default("Applied"),
+  applicationStage: text("application_stage").notNull().default("In Review"),
   resumeVersion: text("resume_version"),
-  modeOfApplication: text("mode_of_application"), // LinkedIn, Site, Referral
+  modeOfApplication: text("mode_of_application"),
   followUpDate: date("follow_up_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const topics = pgTable("topics", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(
-    () => users.id,
-    { onDelete: 'cascade' }
-  ),
-  name: text("name").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const preparationSessions = pgTable("preparation_sessions", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(
-    () => users.id,
-    { onDelete: 'cascade' }
-  ),
-  date: date("date").notNull(),
-  topic: text("topic").notNull(), // Reference to topic name
-  resourceLink: text("resource_link"),
-  confidenceScore: integer("confidence_score"), // 1-5
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
+// INTERVIEWS
 export const interviews = pgTable("interviews", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(
-    () => users.id,
-    { onDelete: 'cascade' }
-  ),
-  applicationId: text("application_id").notNull().references(
-    () => applications.id,
-    { onDelete: 'cascade' }
-  ),
-  interviewStage: text("interview_stage").notNull(), // HR Round, HM Round, Panel, Case Study, etc.
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  applicationId: integer("application_id").notNull().references(() => applications.id, { onDelete: 'cascade' }),
+  interviewStage: text("interview_stage").notNull(),
   interviewDate: timestamp("interview_date"),
-  status: text("status").notNull().default("Scheduled"), // Scheduled, Completed, Cancelled
-  prepResources: text("prep_resources"),
-  assignedTasks: text("assigned_tasks"),
-  feedbackNotes: text("feedback_notes"),
-  interviewScore: integer("interview_score"), // 1-5
+  status: text("status").notNull().default("Scheduled"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// PREPARATION
+export const topics = pgTable("topics", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const preparationSessions = pgTable("preparation_sessions", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  topicId: integer("topic_id").notNull().references(() => topics.id, { onDelete: 'cascade' }),
+  date: date("date").notNull(),
+  resourceLink: text("resource_link"),
+  confidenceScore: integer("confidence_score"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ASSESSMENTS & REMINDERS
 export const assessments = pgTable("assessments", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(
-    () => users.id,
-    { onDelete: 'cascade' }
-  ),
-  interviewId: text("interview_id").notNull().references(
-    () => interviews.id,
-    { onDelete: 'cascade' }
-  ),
-  score: integer("score"), // 1-5
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  interviewId: integer("interview_id").notNull().references(() => interviews.id, { onDelete: 'cascade' }),
+  score: integer("score"),
   difficultyLevel: text("difficulty_level"),
   whatWentWell: text("what_went_well"),
   whatFellShort: text("what_fell_short"),
@@ -104,137 +84,184 @@ export const assessments = pgTable("assessments", {
 });
 
 export const reminders = pgTable("reminders", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(
-    () => users.id,
-    { onDelete: 'cascade' }
-  ),
-  type: text("type").notNull(), // follow-up, prep, assessment
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  type: text("type").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   dueDate: timestamp("due_date").notNull(),
   completed: boolean("completed").default(false),
-  relatedId: integer("related_id"), // Can reference applications, interviews, etc.
+  relatedId: text("related_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
+
+// --- ZOD SCHEMAS ---
+
+// Base schemas for validation, aligning with PG types
+const numberIdSchema = {
+  id: z.number(),
+};
+
+const foreignKeysSchema = {
+  userId: z.string().uuid("Invalid user UUID"),
+  applicationId: z.number().optional(),
+  interviewId: z.number().optional(),
+  topicId: z.number().optional(),
+};
+
+// Application Schemas
+export const applicationSchema = createSelectSchema(applications, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  dateApplied: z.string(),
+  followUpDate: z.string().nullable(),
+  createdAt: z.string(),      // ✅ override default z.date()
+  updatedAt: z.string(),      // ✅ override default z.date()
+});
+
+export const insertApplicationSchema = createInsertSchema(applications, {
+  userId: foreignKeysSchema.userId,
+  dateApplied: z.string(),
+  followUpDate: z.string().nullable().optional(),
+  companyName: z.string().min(1, "Company name is required"),
+  roleTitle: z.string().min(1, "Role title is required"),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateApplicationSchema = insertApplicationSchema.partial();
+
+// Interview Schemas
+export const interviewSchema = createSelectSchema(interviews, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  applicationId: z.number(),
+  interviewDate: z.preprocess((val) => (val ? new Date(val as string).toISOString() : null), z.string().nullable()),
+});
+export const insertInterviewSchema = createInsertSchema(interviews, {
+  userId: foreignKeysSchema.userId,
+  applicationId: z.number(),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateInterviewSchema = insertInterviewSchema.partial();
+
+// Topic Schemas
+export const topicSchema = createSelectSchema(topics, { 
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId 
+});
+export const insertTopicSchema = createInsertSchema(topics, {
+  userId: foreignKeysSchema.userId,
+  name: z.string().min(1, "Topic name is required").max(100),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateTopicSchema = insertTopicSchema.partial();
+
+// Preparation Session Schemas
+export const preparationSessionSchema = createSelectSchema(preparationSessions, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  topicId: z.number(),
+  date: z.string(),
+});
+export const insertPreparationSessionSchema = createInsertSchema(preparationSessions, {
+  userId: foreignKeysSchema.userId,
+  topicId: z.number(),
+  date: z.string(),
+}).omit({ id: true, createdAt: true });
+export const updatePreparationSessionSchema = insertPreparationSessionSchema.partial();
+
+// Assessment Schemas
+export const assessmentSchema = createSelectSchema(assessments, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  interviewId: z.number(),
+});
+export const insertAssessmentSchema = createInsertSchema(assessments, {
+  userId: foreignKeysSchema.userId,
+  interviewId: z.number(),
+}).omit({ id: true, createdAt: true });
+export const updateAssessmentSchema = insertAssessmentSchema.partial();
+
+// Reminder Schemas
+export const reminderSchema = createSelectSchema(reminders, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  dueDate: z.string(),
+});
+export const insertReminderSchema = createInsertSchema(reminders, {
+  userId: foreignKeysSchema.userId,
+  dueDate: z.string(),
+}).omit({ id: true, createdAt: true });
+export const updateReminderSchema = insertReminderSchema.partial();
+
+
+// --- RELATIONS ---
+
+export const authUsersRelations = relations(authUsers, ({ many }) => ({
   applications: many(applications),
+  interviews: many(interviews),
   topics: many(topics),
   preparationSessions: many(preparationSessions),
-  interviews: many(interviews),
   assessments: many(assessments),
   reminders: many(reminders),
 }));
 
-export const topicsRelations = relations(topics, ({ one }) => ({
-  user: one(users, { fields: [topics.userId], references: [users.id] }),
-}));
-
 export const applicationsRelations = relations(applications, ({ one, many }) => ({
-  user: one(users, { fields: [applications.userId], references: [users.id] }),
+  user: one(authUsers, { fields: [applications.userId], references: [authUsers.id] }),
   interviews: many(interviews),
 }));
 
-export const preparationSessionsRelations = relations(preparationSessions, ({ one }) => ({
-  user: one(users, { fields: [preparationSessions.userId], references: [users.id] }),
-}));
-
 export const interviewsRelations = relations(interviews, ({ one, many }) => ({
-  user: one(users, { fields: [interviews.userId], references: [users.id] }),
+  user: one(authUsers, { fields: [interviews.userId], references: [authUsers.id] }),
   application: one(applications, { fields: [interviews.applicationId], references: [applications.id] }),
   assessments: many(assessments),
 }));
 
+export const topicsRelations = relations(topics, ({ one, many }) => ({
+  user: one(authUsers, { fields: [topics.userId], references: [authUsers.id] }),
+  preparationSessions: many(preparationSessions),
+}));
+
+export const preparationSessionsRelations = relations(preparationSessions, ({ one }) => ({
+  user: one(authUsers, { fields: [preparationSessions.userId], references: [authUsers.id] }),
+  topic: one(topics, { fields: [preparationSessions.topicId], references: [topics.id] }),
+}));
+
 export const assessmentsRelations = relations(assessments, ({ one }) => ({
-  user: one(users, { fields: [assessments.userId], references: [users.id] }),
+  user: one(authUsers, { fields: [assessments.userId], references: [authUsers.id] }),
   interview: one(interviews, { fields: [assessments.interviewId], references: [interviews.id] }),
 }));
 
 export const remindersRelations = relations(reminders, ({ one }) => ({
-  user: one(users, { fields: [reminders.userId], references: [users.id] }),
+  user: one(authUsers, { fields: [reminders.userId], references: [authUsers.id] }),
 }));
 
-// Insert schemas
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  isAdmin: true,
-  stripeCustomerId: true,
-  subscriptionId: true,
-}).extend({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
 
-export const insertApplicationSchema = createInsertSchema(applications).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-}).extend({
-  companyName: z.string().min(1, "Company name is required"),
-  roleTitle: z.string().min(1, "Role title is required"),
-});
+// --- TYPES ---
 
-export const insertTopicSchema = createInsertSchema(topics).omit({
-  id: true,
-  createdAt: true,
-}).extend({
-  name: z.string().min(1, "Topic name is required").max(50, "Topic name too long"),
-});
-
-export const insertPreparationSessionSchema = createInsertSchema(preparationSessions).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertInterviewSchema = createInsertSchema(interviews).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertAssessmentSchema = createInsertSchema(assessments).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertReminderSchema = createInsertSchema(reminders).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const updateApplicationSchema = z
-  .object({
-    companyName: z.string().min(1, "Company name is required"),
-    roleTitle: z.string().min(1, "Role title is required"),
-    dateApplied: z.string().optional(), // format: YYYY-MM-DD
-    jobStatus: z.string().optional(), // Applied, In Progress, Rejected, Offer
-    applicationStage: z.string().min(1, "Stage is required"),
-    resumeVersion: z.string().nullable().optional(),
-    modeOfApplication: z.string().min(1, "Mode of application is required"),
-  })
-  .strict();
-  
-// Types
-export type User = typeof users.$inferSelect;
+export type User = z.infer<typeof userSchema>;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export type Application = typeof applications.$inferSelect;
+export type Application = z.infer<typeof applicationSchema>;
 export type InsertApplication = z.infer<typeof insertApplicationSchema>;
 
-export type Topic = typeof topics.$inferSelect;
-export type InsertTopic = z.infer<typeof insertTopicSchema>;
-
-export type PreparationSession = typeof preparationSessions.$inferSelect;
-export type InsertPreparationSession = z.infer<typeof insertPreparationSessionSchema>;
-
-export type Interview = typeof interviews.$inferSelect;
+export type Interview = z.infer<typeof interviewSchema>;
 export type InsertInterview = z.infer<typeof insertInterviewSchema>;
 
-export type Assessment = typeof assessments.$inferSelect;
+export type Topic = z.infer<typeof topicSchema>;
+export type InsertTopic = z.infer<typeof insertTopicSchema>;
+
+export type PreparationSession = z.infer<typeof preparationSessionSchema>;
+export type InsertPreparationSession = z.infer<typeof insertPreparationSessionSchema>;
+
+export type Assessment = z.infer<typeof assessmentSchema>;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
 
-export type Reminder = typeof reminders.$inferSelect;
+export type Reminder = z.infer<typeof reminderSchema>;
 export type InsertReminder = z.infer<typeof insertReminderSchema>;
+
+// Custom user type including potential metadata fields for client-side use
+export type AppUser = User & {
+  username?: string;
+  fullName?: string;
+  avatar?: string;
+  role?: string;
+  subscriptionStatus?: string;
+};

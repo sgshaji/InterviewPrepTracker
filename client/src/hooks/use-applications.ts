@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from './use-toast'
-import type { Application } from '@shared/schema'
+import { Application, applicationSchema, insertApplicationSchema } from '@shared/schema'
+import { useSupabaseAuth } from '@/hooks/use-supabase-auth'
+import { authorizedFetch } from '@/api/authorizedFetch'
 
-export { type Application } from '@shared/schema'
+export { type Application }
 
 interface ApplicationFilters {
   search: string
@@ -21,8 +23,8 @@ interface UseApplicationsReturn {
   filters: ApplicationFilters
   setFilters: (filters: Partial<ApplicationFilters>) => void
   loadMore: () => void
-  addApplication: (data?: Partial<Application>) => Promise<void>
-  updateApplication: (id: string, field: string, value: string) => Promise<void>
+  addApplication: (data?: Partial<Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => Promise<void>
+  updateApplication: (id: string, data: Partial<Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => Promise<void>
   deleteApplication: (id: string) => Promise<void>
   refresh: () => void
 }
@@ -43,8 +45,10 @@ export function useApplications(): UseApplicationsReturn {
     company: '',
     interviewing: false
   })
+  const { user } = useSupabaseAuth()
 
   const loadApplications = useCallback(async (pageNum: number = 1, isLoadMore: boolean = false) => {
+    if (!user) return
     try {
       setLoading(true)
       setError(null)
@@ -59,7 +63,7 @@ export function useApplications(): UseApplicationsReturn {
         ...(filters.interviewing && { interviewing: 'true' })
       })
 
-      const response = await fetch(`/api/applications?${queryParams}`)
+      const response = await authorizedFetch(`/api/applications?${queryParams.toString()}`)
       
       if (!response.ok) {
         throw new Error(`Failed to fetch applications: ${response.statusText}`)
@@ -67,9 +71,10 @@ export function useApplications(): UseApplicationsReturn {
 
       const data = await response.json()
       
+      const parsedApps = applicationSchema.array().parse(data.applications)
+
       setApplications(prev => {
-        const newApplications = isLoadMore ? [...prev, ...data.applications] : data.applications
-        // Check if we have more data to load
+        const newApplications = isLoadMore ? [...prev, ...parsedApps] : parsedApps
         const currentTotal = newApplications.length
         setHasMore(currentTotal < data.totalCount && data.applications.length === PAGE_SIZE)
         return newApplications
@@ -80,14 +85,14 @@ export function useApplications(): UseApplicationsReturn {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load applications'
       setError(errorMessage)
       toast({
-        title: 'Error',
+        title: 'Error loading applications',
         description: errorMessage,
         variant: 'destructive'
       })
     } finally {
       setLoading(false)
     }
-  }, [filters])
+  }, [filters, user])
 
   const setFilters = useCallback((newFilters: Partial<ApplicationFilters>) => {
     setFiltersState(prev => ({ ...prev, ...newFilters }))
@@ -102,174 +107,150 @@ export function useApplications(): UseApplicationsReturn {
     }
   }, [loading, hasMore, page, loadApplications])
 
-  const addApplication = useCallback(async (data?: Partial<Application>) => {
-    const today = new Date().toISOString().split('T')[0]
-    const newApplication: Application = {
-      id: -Date.now(), // Use negative number for temp IDs to avoid conflicts
-      userId: 1, // This should come from auth context
+  const addApplication = useCallback(async (data?: Partial<Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
+    if (!user) {
+      toast({ title: 'Error', description: 'You must be logged in to add an application.', variant: 'destructive' })
+      return
+    }
+    const tempId = `temp-${Date.now()}`
+
+    const newApplicationData = {
       companyName: data?.companyName || '',
       roleTitle: data?.roleTitle || '',
       jobStatus: data?.jobStatus || 'Applied',
       applicationStage: data?.applicationStage || 'In Review',
-      dateApplied: data?.dateApplied || today,
+      dateApplied: data?.dateApplied || new Date().toISOString().split('T')[0],
       resumeVersion: data?.resumeVersion || null,
       modeOfApplication: data?.modeOfApplication || 'Company Website',
       roleUrl: data?.roleUrl || null,
       followUpDate: null,
-      createdAt: new Date(),
-      updatedAt: new Date()
     }
 
+    const tempApplication: Application = {
+      ...newApplicationData,
+      id: tempId,
+      userId: user.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+    
     try {
-      // Optimistic update
-      setApplications(prev => [newApplication, ...prev])
+      setApplications(prev => [tempApplication, ...prev])
 
-      // Remove id before sending to backend
-      const { id, userId, createdAt, updatedAt, ...newAppData } = newApplication;
-      const response = await fetch('/api/applications', {
+      const parsedData = insertApplicationSchema.parse(newApplicationData)
+
+      const response = await authorizedFetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAppData)
+        body: JSON.stringify(parsedData),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create application')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to create application')
       }
 
-      const savedApplication = await response.json()
+      const savedApplication = applicationSchema.parse(await response.json())
       
-      // Update with saved application
       setApplications(prev => 
-        prev.map(app => app.id === newApplication.id ? savedApplication : app)
+        prev.map(app => (app.id === tempId ? savedApplication : app))
       )
 
       toast({
         title: 'Success',
-        description: 'Application created successfully'
+        description: 'Application created successfully',
       })
 
-      // Refresh the list to ensure consistency
-      loadApplications(1, false)
     } catch (err) {
-      // Revert optimistic update
-      setApplications(prev => prev.filter(app => app.id !== newApplication.id))
+      setApplications(prev => prev.filter(app => app.id !== tempId))
       const errorMessage = err instanceof Error ? err.message : 'Failed to create application'
       toast({
         title: 'Error',
         description: errorMessage,
-        variant: 'destructive'
+        variant: 'destructive',
       })
     }
-  }, [loadApplications])
+  }, [user])
 
-  const updateApplication = useCallback(async (id: string, field: string, value: string) => {
-    // Convert string ID back to proper type for comparison
-    const actualId = id.startsWith('temp-') ? id : parseInt(id)
-    
-    // Optimistic update
+  const updateApplication = useCallback(async (id: string, data: Partial<Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
     const prevApplications = [...applications]
+    
+    const originalApp = applications.find(app => app.id === id)
+    if (!originalApp) return
+
+    const updatedAppOptimistic = { ...originalApp, ...data, updatedAt: new Date() }
+
     setApplications(prev => 
-      prev.map(app => app.id === actualId ? { ...app, [field]: value } : app)
+      prev.map(app => (app.id === id ? updatedAppOptimistic : app))
     )
 
     try {
-      const application = applications.find(app => app.id === actualId)
-      if (!application) throw new Error('Application not found')
+      const partialSchema = insertApplicationSchema.partial()
+      const validationResult = partialSchema.parse(data)
 
-      // Validation
-      if (field === 'companyName' && !value.trim()) {
-        throw new Error('Company name is required')
-      }
-      if (field === 'roleTitle' && !value.trim()) {
-        throw new Error('Role title is required')
-      }
-
-      let response: Response
-      
-      if (id.startsWith('temp-')) {
-        // New application - check if both required fields are filled
-        const updatedApp = applications.find(app => app.id === actualId)
-        if (updatedApp && updatedApp.companyName.trim() && updatedApp.roleTitle.trim()) {
-          response = await fetch('/api/applications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...updatedApp, [field]: value })
-          })
-          
-          if (response.ok) {
-            const dbApp = await response.json()
-            setApplications(prev => 
-              prev.map(app => app.id === actualId ? dbApp : app)
-            )
-            toast({
-              title: 'Success',
-              description: 'Application created successfully'
-            })
-          }
-        }
-        return
-      } else {
-        // Existing application
-        response = await fetch(`/api/applications/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ [field]: value })
-        })
-      }
+      const response = await authorizedFetch(`/api/applications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(validationResult),
+      })
 
       if (!response.ok) {
-        throw new Error('Failed to update application')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to update application')
       }
+
+      const updatedApplication = applicationSchema.parse(await response.json())
+
+      setApplications(prev => 
+        prev.map(app => (app.id === id ? updatedApplication : app))
+      )
 
       toast({
         title: 'Success',
-        description: `${field} updated successfully`
+        description: `Application updated successfully`,
       })
 
     } catch (err) {
-      // Revert optimistic update
       setApplications(prevApplications)
       const errorMessage = err instanceof Error ? err.message : 'Failed to update application'
       toast({
         title: 'Error',
         description: errorMessage,
-        variant: 'destructive'
+        variant: 'destructive',
       })
     }
   }, [applications])
 
   const deleteApplication = useCallback(async (id: string) => {
-    const actualId = id.startsWith('temp-') ? id : parseInt(id)
+    const originalApplications = [...applications]
     
-    if (id.startsWith('temp-')) {
-      setApplications(prev => prev.filter(app => app.id !== actualId))
-      return
-    }
+    setApplications(prev => prev.filter(app => app.id !== id))
 
     try {
-      const response = await fetch(`/api/applications/${id}`, {
-        method: 'DELETE'
+      const response = await authorizedFetch(`/api/applications/${id}`, {
+        method: 'DELETE',
       })
 
       if (!response.ok) {
-        throw new Error('Failed to delete application')
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to delete application')
       }
 
-      setApplications(prev => prev.filter(app => app.id !== actualId))
       toast({
         title: 'Success',
-        description: 'Application deleted successfully'
+        description: 'Application deleted successfully',
       })
 
     } catch (err) {
+      setApplications(originalApplications)
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete application'
       toast({
         title: 'Error',
         description: errorMessage,
-        variant: 'destructive'
+        variant: 'destructive',
       })
     }
-  }, [])
+  }, [applications])
 
   const refresh = useCallback(() => {
     setPage(1)
@@ -278,12 +259,11 @@ export function useApplications(): UseApplicationsReturn {
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setPage(1)
-      loadApplications(1, false)
+      refresh()
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [filters])
+  }, [filters, refresh])
 
   return {
     applications,

@@ -1,13 +1,11 @@
 import { randomUUID } from 'crypto';
+import { createClient } from '@supabase/supabase-js';
 import { 
-  users, 
   applications, 
   preparationSessions, 
   interviews, 
-  assessments, 
+  assessments,
   reminders,
-  type User, 
-  type InsertUser,
   type Application,
   type InsertApplication,
   type PreparationSession,
@@ -19,211 +17,154 @@ import {
   type Reminder,
   type InsertReminder
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, asc, and, gte, lte, count, sql, inArray } from "drizzle-orm";
+
+// Define status types locally
+type ApplicationStatus = string;
+type InterviewStage = string;
+type InterviewStatus = string;
+import { db } from './db';
+import { eq, desc, asc, and, gte, lte, count, sql, ne, isNotNull } from 'drizzle-orm';
 import { cache } from "./cache";
 
-// All IDs are strings (UUIDs)
-type ID = string;
+// Define types for the storage interface
+type PaginationOptions = {
+  page?: number;
+  limit?: number;
+  status?: ApplicationStatus;
+  fromDate?: Date;
+  toDate?: Date;
+};
 
+// Export the storage interface (removed user operations)
 export interface IStorage {
-  // Users
-  getUsers(): Promise<User[]>;
-  getUser(id: ID): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  getUserByEmail(email: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  updateUser(id: ID, updates: Partial<InsertUser>): Promise<User>;
-  
   // Applications
-  getApplications(userId: ID, page?: number, limit?: number): Promise<{ totalCount: number; applications: Application[] }>;
-  getApplication(id: ID): Promise<Application | undefined>;
+  getApplications(userId: string, options?: PaginationOptions): Promise<{ totalCount: number; applications: Application[] }>;
+  getApplication(id: string): Promise<Application | undefined>;
   createApplication(application: InsertApplication): Promise<Application>;
-  updateApplication(id: ID, application: Partial<InsertApplication>): Promise<Application>;
-  deleteApplication(id: ID): Promise<void>;
+  updateApplication(id: string, application: Partial<InsertApplication>): Promise<Application>;
+  deleteApplication(id: string): Promise<void>;
   
   // Preparation Sessions
-  getPreparationSessions(userId: ID): Promise<PreparationSession[]>;
-  getPreparationSessionsByDateRange(userId: ID, startDate: string, endDate: string): Promise<PreparationSession[]>;
+  getPreparationSessions(userId: string): Promise<PreparationSession[]>;
+  getPreparationSessionsByDateRange(userId: string, startDate: string, endDate: string): Promise<PreparationSession[]>;
   createPreparationSession(session: InsertPreparationSession): Promise<PreparationSession>;
-  updatePreparationSession(id: ID, session: Partial<InsertPreparationSession>): Promise<PreparationSession>;
-  deletePreparationSession(id: ID): Promise<void>;
+  updatePreparationSession(id: string, session: Partial<InsertPreparationSession>): Promise<PreparationSession>;
+  deletePreparationSession(id: string): Promise<void>;
   
   // Interviews
-  getInterviews(userId: ID): Promise<(Interview & { application: Application })[]>;
-  getInterview(id: ID): Promise<Interview | undefined>;
+  getInterviews(userId: string, filters?: { status?: InterviewStatus; stage?: InterviewStage }): Promise<Interview[]>;
+  getInterview(id: string): Promise<Interview | undefined>;
   createInterview(interview: InsertInterview): Promise<Interview>;
-  updateInterview(id: ID, interview: Partial<InsertInterview>): Promise<Interview>;
-  deleteInterview(id: ID): Promise<void>;
+  updateInterview(id: string, interview: Partial<InsertInterview>): Promise<Interview>;
+  deleteInterview(id: string): Promise<void>;
   
   // Assessments
-  getAssessments(userId: ID): Promise<(Assessment & { interview: Interview & { application: Application } })[]>;
-  getAssessment(id: ID): Promise<Assessment | undefined>;
+  getAssessments(userId: string): Promise<Assessment[]>;
+  getAssessment(id: string): Promise<Assessment | undefined>;
   createAssessment(assessment: InsertAssessment): Promise<Assessment>;
-  updateAssessment(id: ID, assessment: Partial<InsertAssessment>): Promise<Assessment>;
-  deleteAssessment(id: ID): Promise<void>;
+  updateAssessment(id: string, assessment: Partial<InsertAssessment>): Promise<Assessment>;
+  deleteAssessment(id: string): Promise<void>;
   
   // Reminders
-  getReminders(userId: ID): Promise<Reminder[]>;
-  createReminder(reminder: InsertReminder): Promise<Reminder>;
-  updateReminder(id: ID, reminder: Partial<InsertReminder>): Promise<Reminder>;
-  deleteReminder(id: ID): Promise<void>;
+  getReminders(userId: string, filters?: { completed?: boolean; fromDate?: Date; toDate?: Date }): Promise<Reminder[]>;
+  createReminder(reminder: Omit<InsertReminder, 'id' | 'createdAt'>): Promise<Reminder>;
+  updateReminder(id: string, reminder: Partial<Omit<InsertReminder, 'id' | 'userId' | 'createdAt'>>): Promise<Reminder>;
+  deleteReminder(id: string): Promise<void>;
   
   // Analytics
-  getDashboardStats(userId: ID): Promise<{
+  getDashboardStats(userId: string): Promise<{
     totalApplications: number;
     activeInterviews: number;
     prepStreak: number;
     successRate: number;
   }>;
-  getWeeklyPrepTime(userId: ID): Promise<{ date: string; hours: number }[]>;
-  getConfidenceTrends(userId: ID): Promise<{ topic: string; score: number }[]>;
+  getWeeklyPrepTime(userId: string): Promise<{ date: string; hours: number }[]>;
+  getConfidenceTrends(userId: string): Promise<{ topic: string; score: number }[]>;
 }
 
+// Initialize Supabase admin client for server-side operations
+const supabaseAdmin = createClient(
+  process.env.VITE_SUPABASE_URL!,
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  }
+);
+
 export class DatabaseStorage implements IStorage {
-  async getUsers(): Promise<User[]> {
-    return await db.select().from(users);
-  }
-
-  async getUser(id: ID): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
-  }
-
-  async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    return user;
-  }
-
-  async updateUser(id: ID, updates: Partial<InsertUser>): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set(updates)
-      .where(eq(users.id, id))
-      .returning();
-
-    if (!updatedUser) {
-      throw new Error(`User with ID ${id} not found`);
-    }
-
-    // Invalidate relevant caches
-    try {
-      await Promise.all([
-        cache.del(cache.generateKey('user', id)),
-        cache.del(cache.generateKey('user:email', updatedUser.email)),
-        cache.del(cache.generateKey('user:username', updatedUser.username))
-      ]);
-    } catch (error) {
-      console.error('Error updating user cache:', error);
-      // Continue even if cache update fails
-    }
-
-    return updatedUser;
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const userWithId = {
-      ...insertUser,
-      id: randomUUID()
-    };
-    
-    const [newUser] = await db
-      .insert(users)
-      .values(userWithId)
-      .returning();
-    return newUser;
-  }
-
   // Applications
-  async getApplications(userId: ID, page = 1, limit = 10): Promise<{ totalCount: number; applications: Application[] }> {
-    const startTime = Date.now();
-    const cacheKey = `user:${userId}:applications:${page}:${limit}`;
-    
-    // Try to get from cache first
-    const cached = await cache.get<{ totalCount: number; applications: Application[] }>(cacheKey);
-    if (cached) {
-      console.log(`Cache hit for applications (${cacheKey}), took ${Date.now() - startTime}ms`);
-      return cached;
+  async getApplications(userId: string, options: PaginationOptions = {}): Promise<{ totalCount: number; applications: Application[] }> {
+    try {
+      const { page = 1, limit = 10, status, fromDate, toDate } = options;
+      const offset = (page - 1) * limit;
+      
+      // Build where conditions
+      const whereConditions = [eq(applications.userId, userId)];
+      
+      if (status) {
+        whereConditions.push(eq(applications.jobStatus, status));
+      }
+      if (fromDate) {
+        whereConditions.push(gte(applications.dateApplied, fromDate.toISOString().split('T')[0]));
+      }
+      if (toDate) {
+        whereConditions.push(lte(applications.dateApplied, toDate.toISOString().split('T')[0]));
+      }
+      
+      const whereClause = and(...whereConditions);
+      
+      // Get total count
+      const [{ count: totalCount }] = await db
+        .select({ count: count(applications.id) })
+        .from(applications)
+        .where(whereClause);
+      
+      // Get paginated applications
+      const userApplications = await db
+        .select()
+        .from(applications)
+        .where(whereClause)
+        .orderBy(desc(applications.dateApplied))
+        .limit(limit)
+        .offset(offset);
+      
+      return {
+        totalCount,
+        applications: userApplications
+      };
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      throw error;
     }
-    
-    // If not in cache, fetch from database
-    const dbStart = Date.now();
-
-    // Use single query with window function for better performance
-    const result = await db
-      .select({
-        id: applications.id,
-        userId: applications.userId,
-        dateApplied: applications.dateApplied,
-        companyName: applications.companyName,
-        roleTitle: applications.roleTitle,
-        roleUrl: applications.roleUrl,
-        jobStatus: applications.jobStatus,
-        applicationStage: applications.applicationStage,
-        resumeVersion: applications.resumeVersion,
-        modeOfApplication: applications.modeOfApplication,
-        followUpDate: applications.followUpDate,
-        createdAt: applications.createdAt,
-        updatedAt: applications.updatedAt,
-        totalCount: sql<number>`count(*) over()`.as('total_count')
-      })
-      .from(applications)
-      .where(eq(applications.userId, userId))
-      .orderBy(desc(applications.dateApplied), desc(applications.createdAt))
-      .limit(limit)
-      .offset(page * limit);
-    
-    console.log(`DB query took ${Date.now() - dbStart}ms, total: ${Date.now() - startTime}ms`);
-    
-    // Extract totalCount from first row and clean up applications data
-    const totalCount = result.length > 0 ? Number(result[0].totalCount) : 0;
-    const applicationsList = result.map(({ totalCount: _, ...app }) => ({
-      ...app,
-      // Ensure dates are properly typed
-      dateApplied: app.dateApplied ? new Date(app.dateApplied).toISOString().split('T')[0] : null,
-      followUpDate: app.followUpDate ? new Date(app.followUpDate).toISOString().split('T')[0] : null,
-      createdAt: app.createdAt instanceof Date ? app.createdAt : new Date(app.createdAt as string),
-      updatedAt: app.updatedAt instanceof Date ? app.updatedAt : new Date(app.updatedAt as string)
-    }));
-    
-    const response = { totalCount, applications: applicationsList as Application[] };
-    
-    // Cache for 5 minutes
-    await cache.set(cacheKey, response, 300);
-    return response;
   }
 
-  async getApplication(id: ID): Promise<Application | undefined> {
+  async getApplication(id: string): Promise<Application | undefined> {
     const [application] = await db
       .select()
       .from(applications)
-      .where(eq(applications.id, id));
-    return application || undefined;
+      .where(eq(applications.id, id))
+      .limit(1);
+    return application;
   }
 
   async createApplication(application: InsertApplication): Promise<Application> {
-    // Generate a new UUID for the application
-    const applicationWithId = {
-      ...application,
-      id: randomUUID()
-    };
-
-    const [newApplication] = await db
-      .insert(applications)
-      .values(applicationWithId)
-      .returning();
-    
     try {
-      // Invalidate user's applications cache
-      await Promise.all([
-        cache.del(cache.generateKey('applications', application.userId)),
-        cache.del(cache.generateKey('dashboard:stats', application.userId))
-      ]);
+      const applicationWithId = {
+        ...application,
+        id: randomUUID()
+      };
+      
+      const [newApplication] = await db
+        .insert(applications)
+        .values(applicationWithId)
+        .returning();
+      
+      // Invalidate cache for this user's applications
+      await cache.invalidatePattern(`applications:${application.userId}:*`);
       
       return newApplication;
     } catch (error) {
@@ -232,7 +173,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateApplication(id: ID, application: Partial<InsertApplication>): Promise<Application> {
+  async updateApplication(id: string, application: Partial<InsertApplication>): Promise<Application> {
     const [updatedApplication] = await db
       .update(applications)
       .set({ ...application, updatedAt: new Date() })
@@ -245,12 +186,12 @@ export class DatabaseStorage implements IStorage {
     return updatedApplication;
   }
 
-  async deleteApplication(id: ID): Promise<void> {
+  async deleteApplication(id: string): Promise<void> {
     await db.delete(applications).where(eq(applications.id, id));
   }
 
   // Preparation Sessions
-  async getPreparationSessions(userId: ID): Promise<PreparationSession[]> {
+  async getPreparationSessions(userId: string): Promise<PreparationSession[]> {
     return await db
       .select()
       .from(preparationSessions)
@@ -258,7 +199,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(preparationSessions.date));
   }
 
-  async getPreparationSessionsByDateRange(userId: ID, startDate: string, endDate: string): Promise<PreparationSession[]> {
+  async getPreparationSessionsByDateRange(userId: string, startDate: string, endDate: string): Promise<PreparationSession[]> {
     return await db
       .select()
       .from(preparationSessions)
@@ -285,7 +226,7 @@ export class DatabaseStorage implements IStorage {
     return newSession;
   }
 
-  async updatePreparationSession(id: ID, session: Partial<InsertPreparationSession>): Promise<PreparationSession> {
+  async updatePreparationSession(id: string, session: Partial<InsertPreparationSession>): Promise<PreparationSession> {
     const [updatedSession] = await db
       .update(preparationSessions)
       .set(session)
@@ -294,34 +235,42 @@ export class DatabaseStorage implements IStorage {
     return updatedSession;
   }
 
-  async deletePreparationSession(id: ID): Promise<void> {
+  async deletePreparationSession(id: string): Promise<void> {
     await db.delete(preparationSessions).where(eq(preparationSessions.id, id));
   }
 
   // Interviews
-  async getInterviews(userId: ID): Promise<(Interview & { application: Application })[]> {
-    const results = await db
-      .select({
-        interview: interviews,
-        application: applications
-      })
-      .from(interviews)
-      .innerJoin(applications, eq(interviews.applicationId, applications.id))
-      .where(eq(interviews.userId, userId))
-      .orderBy(desc(interviews.interviewDate));
-    
-    return results.map(row => ({
-      ...row.interview,
-      application: row.application
-    }));
-  }
-
-  async getInterview(id: ID): Promise<Interview | undefined> {
+  async getInterview(id: string): Promise<Interview | undefined> {
     const [interview] = await db
       .select()
       .from(interviews)
-      .where(eq(interviews.id, id));
-    return interview || undefined;
+      .where(eq(interviews.id, id))
+      .limit(1);
+    return interview;
+  }
+
+  async getInterviews(
+    userId: string, 
+    filters: {
+      status?: InterviewStatus;
+      stage?: InterviewStage;
+      fromDate?: Date;
+      toDate?: Date;
+    } = {}
+  ): Promise<Interview[]> {
+    const whereClause = and(
+      eq(interviews.userId, userId),
+      filters.status ? eq(interviews.status, filters.status) : undefined,
+      filters.stage ? eq(interviews.interviewStage, filters.stage) : undefined,
+      filters.fromDate ? gte(interviews.interviewDate, filters.fromDate) : undefined,
+      filters.toDate ? lte(interviews.interviewDate, filters.toDate) : undefined
+    );
+
+    return await db
+      .select()
+      .from(interviews)
+      .where(whereClause)
+      .orderBy(desc(interviews.interviewDate));
   }
 
   async createInterview(interview: InsertInterview): Promise<Interview> {
@@ -337,7 +286,7 @@ export class DatabaseStorage implements IStorage {
     return newInterview;
   }
 
-  async updateInterview(id: ID, interview: Partial<InsertInterview>): Promise<Interview> {
+  async updateInterview(id: string, interview: Partial<InsertInterview>): Promise<Interview> {
     const [updatedInterview] = await db
       .update(interviews)
       .set({ ...interview, updatedAt: new Date() })
@@ -346,39 +295,26 @@ export class DatabaseStorage implements IStorage {
     return updatedInterview;
   }
 
-  async deleteInterview(id: ID): Promise<void> {
+  async deleteInterview(id: string): Promise<void> {
     await db.delete(interviews).where(eq(interviews.id, id));
   }
 
   // Assessments
-  async getAssessments(userId: ID): Promise<(Assessment & { interview: Interview & { application: Application } })[]> {
-    const results = await db
-      .select({
-        assessment: assessments,
-        interview: interviews,
-        application: applications
-      })
-      .from(assessments)
-      .innerJoin(interviews, eq(assessments.interviewId, interviews.id))
-      .innerJoin(applications, eq(interviews.applicationId, applications.id))
-      .where(eq(assessments.userId, userId))
-      .orderBy(desc(assessments.createdAt));
-    
-    return results.map(row => ({
-      ...row.assessment,
-      interview: {
-        ...row.interview,
-        application: row.application
-      }
-    }));
-  }
-
-  async getAssessment(id: ID): Promise<Assessment | undefined> {
+  async getAssessment(id: string): Promise<Assessment | undefined> {
     const [assessment] = await db
       .select()
       .from(assessments)
-      .where(eq(assessments.id, id));
-    return assessment || undefined;
+      .where(eq(assessments.id, id))
+      .limit(1);
+    return assessment;
+  }
+
+  async getAssessments(userId: string): Promise<Assessment[]> {
+    return await db
+      .select()
+      .from(assessments)
+      .where(eq(assessments.userId, userId))
+      .orderBy(desc(assessments.createdAt));
   }
 
   async createAssessment(assessment: InsertAssessment): Promise<Assessment> {
@@ -394,7 +330,7 @@ export class DatabaseStorage implements IStorage {
     return newAssessment;
   }
 
-  async updateAssessment(id: ID, assessment: Partial<InsertAssessment>): Promise<Assessment> {
+  async updateAssessment(id: string, assessment: Partial<InsertAssessment>): Promise<Assessment> {
     const [updatedAssessment] = await db
       .update(assessments)
       .set(assessment)
@@ -403,33 +339,48 @@ export class DatabaseStorage implements IStorage {
     return updatedAssessment;
   }
 
-  async deleteAssessment(id: ID): Promise<void> {
+  async deleteAssessment(id: string): Promise<void> {
     await db.delete(assessments).where(eq(assessments.id, id));
   }
 
   // Reminders
-  async getReminders(userId: ID): Promise<Reminder[]> {
+  async getReminders(
+    userId: string, 
+    filters: {
+      completed?: boolean;
+      fromDate?: Date;
+      toDate?: Date;
+    } = {}
+  ): Promise<Reminder[]> {
+    const whereClause = and(
+      eq(reminders.userId, userId),
+      filters.completed !== undefined ? eq(reminders.completed, filters.completed) : undefined,
+      filters.fromDate ? gte(reminders.dueDate, filters.fromDate) : undefined,
+      filters.toDate ? lte(reminders.dueDate, filters.toDate) : undefined
+    );
+
     return await db
       .select()
       .from(reminders)
-      .where(and(eq(reminders.userId, userId), eq(reminders.completed, false)))
+      .where(whereClause)
       .orderBy(asc(reminders.dueDate));
   }
 
-  async createReminder(reminder: InsertReminder): Promise<Reminder> {
-    const reminderWithId = {
+  async createReminder(reminder: Omit<InsertReminder, 'id' | 'createdAt'>): Promise<Reminder> {
+    const newReminder = {
       ...reminder,
-      id: randomUUID()
+      id: randomUUID(),
+      createdAt: new Date()
     };
     
-    const [newReminder] = await db
+    const [createdReminder] = await db
       .insert(reminders)
-      .values(reminderWithId)
+      .values(newReminder)
       .returning();
-    return newReminder;
+    return createdReminder;
   }
 
-  async updateReminder(id: ID, reminder: Partial<InsertReminder>): Promise<Reminder> {
+  async updateReminder(id: string, reminder: Partial<Omit<InsertReminder, 'id' | 'userId' | 'createdAt'>>): Promise<Reminder> {
     const [updatedReminder] = await db
       .update(reminders)
       .set(reminder)
@@ -438,126 +389,176 @@ export class DatabaseStorage implements IStorage {
     return updatedReminder;
   }
 
-  async deleteReminder(id: ID): Promise<void> {
+  async deleteReminder(id: string): Promise<void> {
     await db.delete(reminders).where(eq(reminders.id, id));
   }
 
   // Analytics
-  async getDashboardStats(userId: ID): Promise<{
+  async getDashboardStats(userId: string): Promise<{
     totalApplications: number;
     activeInterviews: number;
     prepStreak: number;
     successRate: number;
   }> {
-    const [totalApplicationsResult] = await db
-      .select({ count: count() })
-      .from(applications)
-      .where(eq(applications.userId, userId));
+    try {
+      // Get total applications count
+      const [{ count: totalApplications }] = await db
+        .select({ count: count(applications.id) })
+        .from(applications)
+        .where(eq(applications.userId, userId));
 
-    // Updated logic for activeInterviews
-    const interviewStages = ["HR Round", "HM Round", "Panel", "Case Study"];
-    const [activeInterviewsResult] = await db
-      .select({ count: count() })
-      .from(applications)
-      .where(and(
-        eq(applications.userId, userId),
-        eq(applications.jobStatus, "Active"),
-        inArray(applications.applicationStage, interviewStages)
-      ));
+      // Get active interviews count
+      const [{ count: activeInterviews }] = await db
+        .select({ count: count(interviews.id) })
+        .from(interviews)
+        .where(and(
+          eq(interviews.userId, userId),
+          ne(interviews.status, 'Completed'),
+          ne(interviews.status, 'Cancelled')
+        ));
 
-    const [offersResult] = await db
-      .select({ count: count() })
-      .from(applications)
-      .where(and(
-        eq(applications.userId, userId),
-        eq(applications.jobStatus, "Offer")
-      ));
+      // Calculate prep streak (consecutive days with preparation sessions in the last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const prepSessions = await db
+        .select({ date: preparationSessions.date })
+        .from(preparationSessions)
+        .where(and(
+          eq(preparationSessions.userId, userId),
+          gte(preparationSessions.date, thirtyDaysAgo.toISOString().split('T')[0])
+        ))
+        .orderBy(desc(preparationSessions.date));
 
-    // Calculate prep streak (simplified - would need more complex logic for actual streak)
-    const recentSessions = await db
-      .select()
-      .from(preparationSessions)
-      .where(eq(preparationSessions.userId, userId))
-      .orderBy(desc(preparationSessions.date))
-      .limit(30);
-
-    let prepStreak = 0;
-    const today = new Date();
-    for (const session of recentSessions) {
-      const sessionDate = new Date(session.date);
-      const daysDiff = Math.floor((today.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysDiff === prepStreak) {
-        prepStreak++;
-      } else {
-        break;
+      // Calculate streak
+      let prepStreak = 0;
+      const uniqueDates = [...new Set(prepSessions.map(s => s.date))].sort().reverse();
+      const today = new Date().toISOString().split('T')[0];
+      
+      for (let i = 0; i < uniqueDates.length; i++) {
+        const expectedDate = new Date();
+        expectedDate.setDate(expectedDate.getDate() - i);
+        const expectedDateStr = expectedDate.toISOString().split('T')[0];
+        
+        if (uniqueDates[i] === expectedDateStr) {
+          prepStreak++;
+        } else {
+          break;
+        }
       }
+
+      // Calculate success rate (offers / total applications)
+      const [{ count: totalOffers }] = await db
+        .select({ count: count(applications.id) })
+        .from(applications)
+        .where(and(
+          eq(applications.userId, userId),
+          eq(applications.jobStatus, 'Offer')
+        ));
+
+      const successRate = totalApplications > 0 ? Math.round((totalOffers / totalApplications) * 100) : 0;
+
+      return {
+        totalApplications,
+        activeInterviews,
+        prepStreak,
+        successRate
+      };
+    } catch (error) {
+      console.error('Error getting dashboard stats:', error);
+      return {
+        totalApplications: 0,
+        activeInterviews: 0,
+        prepStreak: 0,
+        successRate: 0
+      };
     }
-
-    const successRate = totalApplicationsResult.count > 0 
-      ? Math.round((offersResult.count / totalApplicationsResult.count) * 100)
-      : 0;
-
-    return {
-      totalApplications: totalApplicationsResult.count,
-      activeInterviews: activeInterviewsResult.count,
-      prepStreak,
-      successRate,
-    };
   }
 
-  async getWeeklyPrepTime(userId: ID): Promise<{ date: string; hours: number }[]> {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const sessions = await db
-      .select()
-      .from(preparationSessions)
-      .where(and(
-        eq(preparationSessions.userId, userId),
-        gte(preparationSessions.date, sevenDaysAgo.toISOString().split('T')[0])
-      ))
-      .orderBy(asc(preparationSessions.date));
+  async getWeeklyPrepTime(userId: string): Promise<{ date: string; hours: number }[]> {
+    try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      
+      const sessions = await db
+        .select({
+          date: preparationSessions.date,
+          score: preparationSessions.confidenceScore
+        })
+        .from(preparationSessions)
+        .where(and(
+          eq(preparationSessions.userId, userId),
+          gte(preparationSessions.date, sevenDaysAgo.toISOString().split('T')[0])
+        ))
+        .orderBy(asc(preparationSessions.date));
 
-    // Group by date and sum hours (assuming 1 hour per session for simplicity)
-    const dailyHours: { [key: string]: number } = {};
-    
-    sessions.forEach(session => {
-      const date = session.date;
-      dailyHours[date] = (dailyHours[date] || 0) + 1;
-    });
-
-    // Fill in missing days with 0 hours
-    const result = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      result.push({
-        date: dateStr,
-        hours: dailyHours[dateStr] || 0
+      // Group by date and calculate estimated hours (assuming each session is ~1-2 hours)
+      const dailyHours: { [key: string]: number } = {};
+      
+      sessions.forEach(session => {
+        const date = session.date;
+        if (!dailyHours[date]) {
+          dailyHours[date] = 0;
+        }
+        dailyHours[date] += 1.5; // Assume 1.5 hours per session
       });
-    }
 
-    return result;
+      // Fill in missing days with 0 hours
+      const result: { date: string; hours: number }[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        result.push({
+          date: dateStr,
+          hours: dailyHours[dateStr] || 0
+        });
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error getting weekly prep time:', error);
+      return [];
+    }
   }
 
-  async getConfidenceTrends(userId: ID): Promise<{ topic: string; score: number }[]> {
-    const result = await db
-      .select({
-        topic: preparationSessions.topic,
-        avgScore: sql<number>`AVG(${preparationSessions.confidenceScore})::float`
-      })
-      .from(preparationSessions)
-      .where(and(
-        eq(preparationSessions.userId, userId),
-        sql`${preparationSessions.confidenceScore} IS NOT NULL`
-      ))
-      .groupBy(preparationSessions.topic);
+  async getConfidenceTrends(userId: string): Promise<{ topic: string; score: number }[]> {
+    try {
+      // Use preparationSessions since it has the topic and confidenceScore fields
+      const sessions = await db
+        .select({
+          topic: preparationSessions.topic,
+          score: preparationSessions.confidenceScore
+        })
+        .from(preparationSessions)
+        .where(and(
+          eq(preparationSessions.userId, userId),
+          isNotNull(preparationSessions.confidenceScore)
+        ))
+        .orderBy(desc(preparationSessions.date))
+        .limit(10);
 
-    return result.map(r => ({
-      topic: r.topic,
-      score: Math.round(r.avgScore * 10) / 10
-    }));
+      // Group by topic and get average score
+      const topicScores: { [key: string]: number[] } = {};
+      
+      sessions.forEach(session => {
+        if (session.score !== null) {
+          if (!topicScores[session.topic]) {
+            topicScores[session.topic] = [];
+          }
+          topicScores[session.topic].push(session.score);
+        }
+      });
+
+      // Calculate average scores
+      return Object.entries(topicScores).map(([topic, scores]) => ({
+        topic,
+        score: Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+      }));
+    } catch (error) {
+      console.error('Error getting confidence trends:', error);
+      return [];
+    }
   }
 }
 

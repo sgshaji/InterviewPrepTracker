@@ -1,7 +1,64 @@
-import { Express } from "express";
-import { storage } from "./storage";
-import { createClient } from "@supabase/supabase-js";
-import { User as LocalUser } from "@shared/schema";
+import { createClient } from '@supabase/supabase-js';
+import type { NextFunction, Request, Response } from 'express';
+
+// Extend Express types
+declare global {
+  namespace Express {
+    interface User {
+      id: string;
+      email?: string;
+      username?: string;
+      fullName?: string | null;
+      avatar?: string | null;
+      role?: string;
+      subscriptionStatus?: string;
+      email_confirmed_at?: Date | null;
+      created_at?: Date;
+      updated_at?: Date;
+    }
+    
+    interface Request {
+      user?: User;
+      auth?: {
+        userId: string;
+        email?: string;
+        provider?: string;
+      };
+    }
+  }
+}
+
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: Express.User;
+    auth?: {
+      userId: string;
+      email?: string;
+      provider?: string;
+    };
+  }
+}
+
+declare module 'express' {
+  interface Request {
+    user?: Express.User;
+    auth?: {
+      userId: string;
+      email?: string;
+      provider?: string;
+    };
+  }
+}
+
+// Define ExpressRequest type for request handlers
+type ExpressRequest = Request & {
+  user?: Express.User;
+  auth?: {
+    userId: string;
+    email?: string;
+    provider?: string;
+  };
+};
 
 // Initialize Supabase admin client for server-side operations
 const supabaseAdmin = createClient(
@@ -9,149 +66,83 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY!
 );
 
-export function setupSupabaseAuth(app: Express) {
-  // Sync Supabase user with local database
-  app.post("/api/auth/sync-user", async (req, res) => {
-    try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Missing or invalid authorization header' });
-      }
-
-      const token = authHeader.split(' ')[1];
-      
-      // Verify the JWT token with Supabase
-      const { data: { user: supabaseUser }, error } = await supabaseAdmin.auth.getUser(token);
-      
-      if (error || !supabaseUser) {
-        return res.status(401).json({ error: 'Invalid token' });
-      }
-
-      const { email, id: supabaseId } = supabaseUser;
-      const { name, avatar, provider } = req.body;
-
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      // Check if user exists in local database
-      let localUser = await storage.getUserByEmail(email);
-      
-      if (!localUser) {
-        // Create new user in local database
-        const username = email.split('@')[0]; // Use email prefix as username
-        localUser = await storage.createUser({
-          username,
-          email,
-          name: name || username,
-          password: 'oauth_user', // Placeholder for OAuth users
-          role: 'user',
-          subscriptionStatus: email === 'sgshaji@gmail.com' ? 'active' : 'inactive'
-        });
-        
-        console.log(`✅ Created new user: ${email} (Local ID: ${localUser.id})`);
-      } else {
-        // Update existing user info if needed
-        const updates: Partial<LocalUser> = {};
-        let needsUpdate = false;
-        
-        if (name && localUser.name !== name) {
-          updates.name = name;
-          needsUpdate = true;
-        }
-        
-        // Add more fields to update as needed
-        if (avatar && localUser.avatar !== avatar) {
-          updates.avatar = avatar;
-          needsUpdate = true;
-        }
-        
-        if (needsUpdate) {
-          try {
-            localUser = await storage.updateUser(localUser.id, updates);
-            console.log(`🔄 Updated user ${localUser.id} with new information`);
-          } catch (error) {
-            console.error('Error updating user:', error);
-            // Continue with existing user data if update fails
-          }
-        }
-      }
-
-      if (!localUser) {
-        throw new Error('Failed to create or retrieve user');
-      }
-      
-      // Store Supabase ID mapping for future reference
-      // You might want to add a supabase_id column to your users table
-      
-      const userResponse = {
-        id: localUser.id,
-        username: localUser.username,
-        email: localUser.email,
-        name: localUser.name,
-        role: localUser.role,
-        subscriptionStatus: localUser.subscriptionStatus,
-        avatar: localUser.avatar,
-        supabaseId
-      };
-      
-      res.json(userResponse);
-
-    } catch (error) {
-      console.error('Error syncing user:', error);
-      res.status(500).json({ error: 'Failed to sync user' });
-    }
-  });
-
+export function setupSupabaseAuth(app: any) {
   // Auth callback handler (for OAuth redirects)
-  app.get("/auth/callback", (_, res) => {
+  app.get("/auth/callback", (_: any, res: any) => {
     // Redirect to the main app after OAuth
     res.redirect("/");
   });
 }
 
+// Helper function to extract user metadata from auth user
+const getUserFromAuthUser = (authUser: any): Express.User => {
+  const username = authUser.user_metadata?.preferred_username || 
+                   authUser.user_metadata?.username ||
+                   authUser.email?.split('@')[0] || 
+                   'user';
+  
+  const fullName = authUser.user_metadata?.full_name || 
+                   authUser.user_metadata?.name || 
+                   authUser.email?.split('@')[0] || 
+                   'New User';
+  
+  const subscriptionStatus = authUser.email === 'sgshaji@gmail.com' ? 'active' : 'inactive';
+  
+  return {
+    id: authUser.id,
+    email: authUser.email,
+    username,
+    fullName,
+    avatar: authUser.user_metadata?.avatar_url || null,
+    role: 'user',
+    subscriptionStatus,
+    email_confirmed_at: authUser.email_confirmed_at ? new Date(authUser.email_confirmed_at) : null,
+    created_at: authUser.created_at ? new Date(authUser.created_at) : new Date(),
+    updated_at: authUser.updated_at ? new Date(authUser.updated_at) : new Date()
+  };
+};
+
 // Middleware to authenticate requests using Supabase JWT
-export async function requireSupabaseAuth(req: any, res: any, next: any) {
+export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
+    // Get the JWT from the Authorization header
     const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing authorization header' });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
-    
-    // Verify the JWT token with Supabase
-    const { data: { user: supabaseUser }, error } = await supabaseAdmin.auth.getUser(token);
-    
-    if (error || !supabaseUser) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+
+    // Verify the JWT and get the auth user
+    const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !authUser) {
+      return res.status(401).json({ error: 'Invalid token' });
     }
 
-    // Get local user from database
-    const localUser = await storage.getUserByEmail(supabaseUser.email!);
+    // Convert auth user to Express user format
+    const user = getUserFromAuthUser(authUser);
     
-    if (!localUser) {
-      return res.status(401).json({ error: 'User not found in local database' });
-    }
+    // Set user on request for subsequent middleware
+    req.user = user;
+    req.auth = {
+      userId: authUser.id,
+      email: authUser.email,
+      provider: authUser.app_metadata?.provider || 'email'
+    };
 
-    // Make sure using the Supabase user ID
-    req.userId = supabaseUser.id;
-    
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    console.error('Error in requireAuth middleware:', error);
     res.status(500).json({ error: 'Authentication failed' });
   }
-}
+};
 
-// Helper function to get current user ID from request
-export function getCurrentUserId(req: any): string {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    throw new Error('No token provided');
-  }
-  
-  // In a real implementation, you would verify the JWT and extract the user ID
-  // For now, we'll return a placeholder
-  return req.user?.id || ''; // Return authenticated user's ID or empty string if not found
-}
+// Utility functions for getting user information
+export const getCurrentUserId = (req: ExpressRequest): string | null => {
+  return req.auth?.userId || req.user?.id || null;
+};
+
+export const getCurrentUser = async (req: ExpressRequest): Promise<Express.User | null> => {
+  return req.user || null;
+};

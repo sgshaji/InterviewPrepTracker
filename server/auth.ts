@@ -1,3 +1,9 @@
+// LEGACY AUTH FILE - DISABLED
+// This file contains the old Passport.js authentication logic that used a separate users table.
+// It has been disabled in favor of using Supabase auth.users directly.
+// Keeping this file for reference but all functionality is now handled by supabase-auth.ts
+
+/*
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Express } from "express";
@@ -156,5 +162,16 @@ export function requireAuth(req: any, res: any, next: any) {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Authentication required" });
   }
+  next();
+}
+*/
+
+// Export empty functions to prevent import errors
+export function setupAuth(app: any) {
+  // Legacy auth disabled - using Supabase auth instead
+}
+
+export function requireAuth(req: any, res: any, next: any) {
+  // Legacy auth disabled - use requireAuth from supabase-auth.ts instead
   next();
 }
