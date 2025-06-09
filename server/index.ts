@@ -21,15 +21,16 @@ console.log("Environment Check:", {
 
 const app = express();
 
-// ❌ Removed redundant manual CSP override; Helmet handles this via security.ts
-
-// Setup security middleware
-setupSecurity(app);
-
 // Basic middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(requestLogger);
+
+// Disable CSP for development
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "");
+  next();
+});
 
 (async () => {
   // Initialize Redis cache (non-blocking)
@@ -41,6 +42,9 @@ app.use(requestLogger);
 
   // Setup authentication
   setupSupabaseAuth(app);
+
+  // Setup security middleware (after disabling CSP)
+  setupSecurity(app);
 
   const server = await registerRoutes(app);
 

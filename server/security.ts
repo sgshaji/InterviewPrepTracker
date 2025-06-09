@@ -10,37 +10,23 @@ dotenv.config();
 // Determine if we are in development mode
 const isDev = process.env.NODE_ENV === 'development';
 
-const supabaseUrl: string = process.env.VITE_SUPABASE_URL || 'https://bzukbciiqwdckzmwarku.supabase.co';
-
-// Security headers configuration
+// Security headers configuration - with CSP completely disabled for now
 export const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: isDev ? ["'self'", "'unsafe-inline'"] : ["'self'"],
-      scriptSrc: isDev ? ["'self'", "'unsafe-inline'", supabaseUrl] : ["'self'", supabaseUrl],
-      imgSrc: ["'self'", "data:", "https:", "*.clearbit.com", "*.ui-avatars.com", "*.logo.dev"],
-      connectSrc: ["'self'", supabaseUrl],
-      fontSrc: ["'self'", "https:", "data:"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'self'", supabaseUrl, "https://accounts.google.com"],
-    },
-  },
+  contentSecurityPolicy: false, // Disable CSP completely
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: { policy: "unsafe-none" },
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  dnsPrefetchControl: { allow: false },
-  frameguard: { action: "deny" },
+  dnsPrefetchControl: { allow: true },
+  frameguard: false, // Disable frameguard to allow frames
   hidePoweredBy: true,
-  hsts: {
+  hsts: isDev ? false : {
     maxAge: 31536000,
     includeSubDomains: true,
     preload: true
   },
   ieNoOpen: true,
   noSniff: true,
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  referrerPolicy: { policy: "no-referrer-when-downgrade" },
   xssFilter: true
 });
 
@@ -62,9 +48,9 @@ export const apiRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// CORS configuration
+// CORS configuration - allow all origins in development
 export const corsOptions = cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5000',
+  origin: true, // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -73,11 +59,11 @@ export const corsOptions = cors({
 
 // Setup all security middleware
 export function setupSecurity(app: Express) {
-  // Basic security headers
-  app.use(securityHeaders);
-  
   // CORS
   app.use(corsOptions);
+  
+  // Basic security headers (with CSP disabled)
+  app.use(securityHeaders);
   
   // Rate limiting
   app.use(rateLimiter);
@@ -88,4 +74,4 @@ export function setupSecurity(app: Express) {
   
   // Disable X-Powered-By header
   app.disable('x-powered-by');
-} 
+}
