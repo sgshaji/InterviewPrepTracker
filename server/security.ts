@@ -10,38 +10,27 @@ dotenv.config();
 // Determine if we are in development mode
 const isDev = process.env.NODE_ENV === 'development';
 
-const supabaseUrl: string = process.env.VITE_SUPABASE_URL || 'https://bzukbciiqwdckzmwarku.supabase.co';
+const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://bzukbciiqwdckzmwarku.supabase.co';
 
 // Security headers configuration
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      connectSrc: ["'self'", supabaseUrl, "https://*.supabase.co", "wss://*.supabase.co", "https://logo.clearbit.com", "https://ui-avatars.com"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", supabaseUrl],
-      imgSrc: ["'self'", "data:", "https:", "*.clearbit.com", "*.ui-avatars.com", "*.logo.dev"],
-      connectSrc: ["'self'", supabaseUrl],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", supabaseUrl, "https://*.supabase.co"],
+      imgSrc: ["'self'", "data:", "https:", "*.clearbit.com", "*.ui-avatars.com", "*.logo.dev", "https://logo.clearbit.com"],
       fontSrc: ["'self'", "https:", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
-      frameSrc: ["'self'", supabaseUrl, "https://accounts.google.com"],
+      frameSrc: ["'self'", supabaseUrl, "https://*.supabase.co", "https://accounts.google.com"],
+      frameAncestors: ["'self'"],
     },
   },
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: { policy: "unsafe-none" },
   crossOriginResourcePolicy: { policy: "cross-origin" },
-  dnsPrefetchControl: { allow: false },
-  frameguard: { action: "sameorigin" }, // Changed from "deny" to "sameorigin"
-  hidePoweredBy: true,
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  },
-  ieNoOpen: true,
-  noSniff: true,
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  xssFilter: true
 });
 
 // Rate limiting configuration
@@ -64,7 +53,7 @@ export const apiRateLimiter = rateLimit({
 
 // CORS configuration
 export const corsOptions = cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5000',
+  origin: true, // Allow all origins in development
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
