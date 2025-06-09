@@ -17,8 +17,8 @@ export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: isDev ? ["'self'", "'unsafe-inline'"] : ["'self'"],
-      scriptSrc: isDev ? ["'self'", "'unsafe-inline'", supabaseUrl] : ["'self'", supabaseUrl],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", supabaseUrl],
       imgSrc: ["'self'", "data:", "https:", "*.clearbit.com", "*.ui-avatars.com", "*.logo.dev"],
       connectSrc: ["'self'", supabaseUrl],
       fontSrc: ["'self'", "https:", "data:"],
@@ -31,7 +31,7 @@ export const securityHeaders = helmet({
   crossOriginOpenerPolicy: { policy: "unsafe-none" },
   crossOriginResourcePolicy: { policy: "cross-origin" },
   dnsPrefetchControl: { allow: false },
-  frameguard: { action: "deny" },
+  frameguard: { action: "sameorigin" }, // Changed from "deny" to "sameorigin"
   hidePoweredBy: true,
   hsts: {
     maxAge: 31536000,
@@ -88,4 +88,4 @@ export function setupSecurity(app: Express) {
   
   // Disable X-Powered-By header
   app.disable('x-powered-by');
-} 
+}
