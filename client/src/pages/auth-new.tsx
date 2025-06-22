@@ -89,8 +89,12 @@ export default function AuthPage() {
       return;
     }
 
+    console.log('🔥 Form submission - starting signup process');
     try {
+      console.log('🔄 Calling signUp function with:', { email: signupData.email, fullName: signupData.fullName });
       await signUp(signupData.email, signupData.password, signupData.fullName);
+      console.log('✅ SignUp completed successfully, clearing form');
+      
       // Clear form on success
       setSignupData({
         fullName: '',
@@ -98,7 +102,10 @@ export default function AuthPage() {
         password: '',
         confirmPassword: ''
       });
+      
+      console.log('📋 Form cleared');
     } catch (error: any) {
+      console.error('❌ Signup error in form handler:', error);
       setError(error.message || 'Failed to create account');
     }
   };

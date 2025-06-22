@@ -74,25 +74,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     setIsLoading(true);
+    console.log('🚀 useAuth signUp called for:', email);
+    
     try {
       const result = await authService.signUp({ email, password, fullName });
+      console.log('📧 Auth service result:', result);
       
       if (result.error) {
+        console.error('❌ Auth service error:', result.error);
         throw new Error(result.error);
       }
 
+      console.log('✅ Signup successful, showing toast notification');
+      
       if (result.needsEmailConfirmation) {
+        console.log('📬 Email confirmation needed');
         toast({
           title: "Account created successfully!",
           description: "Please check your email and click the verification link to complete signup.",
         });
       } else {
+        console.log('🎉 Account ready to use');
         toast({
           title: "Account created successfully!",
           description: "You can now access your dashboard.",
         });
       }
     } catch (error: any) {
+      console.error('💥 Signup failed:', error);
       toast({
         title: "Sign up failed",
         description: error.message,
