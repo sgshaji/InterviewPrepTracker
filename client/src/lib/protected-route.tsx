@@ -1,10 +1,10 @@
 import React from "react";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useAuth } from "../hooks/use-auth";
 import { Navigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useSupabaseAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -19,7 +19,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // Redirect to auth page if not authenticated
-  if (!user) {
+  if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
 

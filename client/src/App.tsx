@@ -5,7 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { queryClient } from "@/lib/queryClient";
-import { AuthProvider } from "@/hooks/use-supabase-auth";
+import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 import Sidebar from "@/components/layout/sidebar";
@@ -19,13 +19,17 @@ import Interviews from "@/pages/interviews";
 import Assessments from "@/pages/assessments";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
-import AuthPage from "@/pages/auth";
+import AuthPage from "./pages/auth-new";
+import AuthCallback from "./pages/auth-callback";
+import ResetPassword from "./pages/reset-password";
 
 function Router() {
   return (
     <Routes>
       {/* Standalone authentication routes */}
       <Route path="/auth" element={<AuthPage />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/reset-password" element={<ResetPassword />} />
       <Route path="/login" element={<Navigate to="/auth" />} />
       <Route path="/register" element={<Navigate to="/auth" />} />
 
