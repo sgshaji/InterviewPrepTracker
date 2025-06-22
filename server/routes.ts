@@ -9,7 +9,7 @@ import {
   insertAssessmentSchema,
   insertReminderSchema,
   insertTopicSchema 
-} from "@shared/schema";
+} from "../shared/schema";
 import { z } from "zod";
 import { validateDatabaseInput, asyncHandler, requestLogger } from "./middleware";
 import compression from "compression";

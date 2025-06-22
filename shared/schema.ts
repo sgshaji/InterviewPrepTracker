@@ -3,11 +3,11 @@ import { relations } from 'drizzle-orm';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-// This is a reference to the auth.users table managed by Supabase Auth
+// Reference to Supabase auth.users table for foreign key relationships
+// This table is managed by Supabase and exists in the auth schema
 export const authUsers = pgTable('auth.users', {
   id: uuid('id').primaryKey(),
   email: text('email'),
-  // Add other Supabase-managed columns if needed for relations
 });
 
 // Zod schema for the User, ensuring the ID is treated as a UUID string.
