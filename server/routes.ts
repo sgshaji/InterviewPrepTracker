@@ -31,20 +31,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enable compression
   app.use(compression());
 
-  // Test endpoint to verify Supabase signup works
-  app.post("/api/test-signup", async (req: Request, res: Response) => {
+  // Authentication status endpoint
+  app.get("/api/auth/status", requireAuth, async (req: Request, res: Response) => {
     try {
-      const { email, password, fullName } = req.body;
-      console.log('Testing signup for:', email);
-      
-      // For now, just return success to test the endpoint
+      const user = req.user;
       res.json({ 
-        success: true, 
-        message: "Signup endpoint working",
-        receivedData: { email, fullName }
+        authenticated: true,
+        user: {
+          id: user?.id,
+          email: user?.email,
+          fullName: user?.fullName
+        }
       });
     } catch (error: any) {
-      console.error('Signup test error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Test authentication endpoint
+  app.get("/api/test-auth", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const userId = getCurrentUserId(req);
+      res.json({ 
+        success: true,
+        message: "Authentication working",
+        userId,
+        user: req.user
+      });
+    } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
