@@ -202,7 +202,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
       setIsLoading(true);
-      const { error } = await supabase.auth.signUp({
+      console.log('🔑 Starting signup process for:', email);
+      
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -213,13 +215,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      if (error) throw error;
+      console.log('📧 Signup response:', { data, error });
 
-      toast({
-        title: "Account created!",
-        description: "Please check your email to verify your account.",
-      });
+      if (error) {
+        console.error('❌ Signup error:', error);
+        throw error;
+      }
+
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('📬 User created, email confirmation required');
+        toast({
+          title: "Account created!",
+          description: "Please check your email to verify your account.",
+        });
+      } else if (data.user && data.user.email_confirmed_at) {
+        console.log('✅ User created and automatically confirmed');
+        toast({
+          title: "Account created!",
+          description: "You can now sign in with your credentials.",
+        });
+      } else {
+        console.log('⚠️ Unexpected signup response');
+        toast({
+          title: "Account created!",
+          description: "Please check your email or try signing in.",
+        });
+      }
     } catch (error: any) {
+      console.error('❌ Signup failed:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to create account",
