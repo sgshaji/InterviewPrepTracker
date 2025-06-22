@@ -234,10 +234,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       setIsLoading(true);
+      // Use the current origin for the redirect URL
+      const redirectTo = window.location.origin.includes('replit.app') 
+        ? `${window.location.origin}/auth/callback`
+        : `http://localhost:5000/auth/callback`;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo,
         },
       });
 
