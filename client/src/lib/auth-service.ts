@@ -75,7 +75,19 @@ class AuthService {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific Supabase errors
+        if (error.message.includes('User already registered')) {
+          throw new Error('An account with this email already exists. Please sign in instead.');
+        }
+        if (error.message.includes('Email rate limit exceeded')) {
+          throw new Error('Too many signup attempts. Please wait a few minutes before trying again.');
+        }
+        if (error.message.includes('Invalid email')) {
+          throw new Error('Please enter a valid email address.');
+        }
+        throw error;
+      }
 
       return {
         user: authData.user,

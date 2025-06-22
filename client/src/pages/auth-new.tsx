@@ -32,6 +32,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   
   const [loginData, setLoginData] = useState<LoginData>({
     email: '',
@@ -57,6 +58,7 @@ export default function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     
     if (!loginData.email || !loginData.password) {
       setError('Please fill in all fields');
@@ -95,7 +97,8 @@ export default function AuthPage() {
       await signUp(signupData.email, signupData.password, signupData.fullName);
       console.log('✅ SignUp completed successfully, clearing form');
       
-      // Clear form on success
+      // Show success message and clear form
+      setSuccessMessage('Account created successfully! Please check your email for verification instructions.');
       setSignupData({
         fullName: '',
         email: '',
@@ -103,16 +106,24 @@ export default function AuthPage() {
         confirmPassword: ''
       });
       
-      console.log('📋 Form cleared');
+      // Switch to login tab after successful signup
+      setTimeout(() => {
+        setActiveTab('login');
+        setSuccessMessage('');
+      }, 5000);
+      
+      console.log('📋 Form cleared and success message shown');
     } catch (error: any) {
       console.error('❌ Signup error in form handler:', error);
       setError(error.message || 'Failed to create account');
+      setSuccessMessage('');
     }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     
     if (!forgotPasswordData.email) {
       setError('Please enter your email address');
@@ -157,7 +168,11 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs value={activeTab} onValueChange={(tab) => {
+              setActiveTab(tab);
+              setError('');
+              setSuccessMessage('');
+            }} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="login">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -169,6 +184,15 @@ export default function AuthPage() {
                 <Alert className="mt-4 border-red-200 bg-red-50">
                   <AlertDescription className="text-red-700">
                     {error}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Success Alert */}
+              {successMessage && (
+                <Alert className="mt-4 border-green-200 bg-green-50">
+                  <AlertDescription className="text-green-700">
+                    {successMessage}
                   </AlertDescription>
                 </Alert>
               )}

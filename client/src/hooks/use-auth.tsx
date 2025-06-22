@@ -90,14 +90,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (result.needsEmailConfirmation) {
         console.log('📬 Email confirmation needed');
         toast({
-          title: "Account created successfully!",
-          description: "Please check your email and click the verification link to complete signup.",
+          title: "Account Created Successfully!",
+          description: "Please check your email inbox and click the verification link to activate your account. Then you can sign in.",
+          duration: 8000, // Show for 8 seconds
         });
       } else {
         console.log('🎉 Account ready to use');
         toast({
-          title: "Account created successfully!",
+          title: "Account Created Successfully!",
           description: "You can now access your dashboard.",
+          duration: 5000,
         });
       }
     } catch (error: any) {
