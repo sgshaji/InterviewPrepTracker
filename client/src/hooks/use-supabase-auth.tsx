@@ -225,13 +225,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user && !data.user.email_confirmed_at) {
         console.log('📬 User created, email confirmation required');
         toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
+          title: "Account created successfully!",
+          description: "Check your email and click the verification link to complete signup. Then you can sign in.",
         });
       } else if (data.user && data.user.email_confirmed_at) {
         console.log('✅ User created and automatically confirmed');
         toast({
-          title: "Account created!",
+          title: "Account created successfully!",
           description: "You can now sign in with your credentials.",
         });
       } else {

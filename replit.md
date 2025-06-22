@@ -106,6 +106,9 @@ The Interview Prep Tracker is a comprehensive full-stack web application designe
 ## Recent Changes
 - June 22, 2025: Successfully migrated from Replit Agent to standard Replit environment
 - June 22, 2025: Fixed database connectivity and authentication setup
+- June 22, 2025: Resolved critical API routing issue preventing signup/login functionality
+- June 22, 2025: Signup process now working correctly with proper email verification flow
+- June 22, 2025: Added comprehensive debugging and error handling for authentication
 - June 22, 2025: Google OAuth requires additional configuration in Supabase dashboard
 
 ## Google OAuth Setup Instructions
