@@ -46,16 +46,17 @@ app.use((req, res, next) => {
   // Setup security middleware (after disabling CSP)
   setupSecurity(app);
 
+  // Register API routes BEFORE Vite middleware to prevent interception
   const server = await registerRoutes(app);
 
-  app.use(errorHandler);
-
-  // Setup Vite in development
+  // Setup Vite in development (after API routes)
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
+
+  app.use(errorHandler);
 
   // Start the server
   const port = parseInt(process.env.PORT || "5000", 10);
