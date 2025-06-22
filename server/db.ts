@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import * as schema from "../migrations/schema";
+import * as schema from "../shared/schema";
 
 // Verify DATABASE_URL is set
 if (!process.env.DATABASE_URL) {

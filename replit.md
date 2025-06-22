@@ -103,8 +103,39 @@ The Interview Prep Tracker is a comprehensive full-stack web application designe
 - **Backup**: Database backup utilities for data protection
 - **Performance**: Database indexing for query optimization
 
+## Recent Changes
+- June 22, 2025: Successfully migrated from Replit Agent to standard Replit environment
+- June 22, 2025: Fixed database connectivity and authentication setup
+- June 22, 2025: Google OAuth requires additional configuration in Supabase dashboard
+
+## Google OAuth Setup Instructions
+
+The application is fully functional with email/password authentication. To enable Google sign-in:
+
+1. **Go to your Supabase Dashboard** (supabase.com → Your Project)
+2. **Navigate to Authentication → Providers**
+3. **Enable Google Provider:**
+   - Toggle Google provider to ON
+   - You'll need Google OAuth credentials from Google Cloud Console
+4. **Set up Google OAuth in Google Cloud:**
+   - Go to console.cloud.google.com
+   - Create or select a project
+   - Enable Google+ API
+   - Create OAuth 2.0 credentials
+   - Add authorized redirect URIs:
+     - `https://bzukbciiqwdckzmwarku.supabase.co/auth/v1/callback`
+5. **Add the credentials to Supabase:**
+   - Copy Client ID and Client Secret from Google Cloud
+   - Paste them in Supabase Authentication → Providers → Google
+6. **Configure Site URL in Supabase:**
+   - Go to Authentication → URL Configuration
+   - Add Site URL: `http://localhost:5000` (development)
+   - Add Redirect URLs: 
+     - `http://localhost:5000/auth/callback`
+     - `https://your-replit-app.replit.app/auth/callback` (production)
+
 ## Changelog
-- June 22, 2025. Initial setup
+- June 22, 2025: Initial setup and migration completed
 
 ## User Preferences
 
