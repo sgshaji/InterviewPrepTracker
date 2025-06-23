@@ -486,9 +486,22 @@ export default function ModernApplicationTable({
         
         {/* Load More Button */}
         {hasMore && (
-          <div className="text-center py-4">
+          <div className="text-center py-4 space-x-2">
             <Button variant="outline" onClick={onLoadMore} disabled={loading}>
-              {loading ? 'Loading...' : 'Load More Applications'}
+              {loading ? 'Loading...' : 'Load More (50)'}
+            </Button>
+            <Button variant="secondary" onClick={() => {
+              // Load all remaining applications
+              let currentCount = applications.length;
+              const loadAll = async () => {
+                while (currentCount < totalCount) {
+                  await onLoadMore();
+                  currentCount += 50;
+                }
+              };
+              loadAll();
+            }} disabled={loading}>
+              Load All ({totalCount - applications.length} remaining)
             </Button>
           </div>
         )}

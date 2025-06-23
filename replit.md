@@ -104,6 +104,7 @@ The Interview Prep Tracker is a comprehensive full-stack web application designe
 - **Performance**: Database indexing for query optimization
 
 ## Recent Changes
+- June 23, 2025: Enhanced Applications page pagination - increased from 20 to 50 records per page with "Load All" option
 - June 23, 2025: MAJOR FIX - Resolved Replit environment header filtering issue using X-Request-ID header bypass
 - June 23, 2025: Authentication system fully working - all API calls now reach server successfully  
 - June 23, 2025: Added user profile dropdown with logout functionality - confirmed working

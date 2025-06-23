@@ -28,7 +28,7 @@ interface UseApplicationsReturn {
   refresh: () => void
 }
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 50
 
 export function useApplications(): UseApplicationsReturn {
   const [applications, setApplications] = useState<Application[]>([])
