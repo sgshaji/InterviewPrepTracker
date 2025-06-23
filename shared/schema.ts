@@ -95,6 +95,55 @@ export const reminders = pgTable("reminders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// STREAKS & GAMIFICATION SYSTEM
+export const streaks = pgTable("streaks", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  currentStreak: integer("current_streak").notNull().default(0),
+  longestStreak: integer("longest_streak").notNull().default(0),
+  lastActivityDate: date("last_activity_date"),
+  totalPoints: integer("total_points").notNull().default(0),
+  level: integer("level").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// DAILY GOALS
+export const dailyGoals = pgTable("daily_goals", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  goalType: text("goal_type").notNull(), // 'applications', 'behavioral_prep', 'technical_prep', 'system_design', 'coding_practice'
+  targetCount: integer("target_count").notNull().default(1),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// DAILY ACTIVITIES
+export const dailyActivities = pgTable("daily_activities", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  activityDate: date("activity_date").notNull(),
+  goalType: text("goal_type").notNull(),
+  completedCount: integer("completed_count").notNull().default(0),
+  targetCount: integer("target_count").notNull(),
+  isCompleted: boolean("is_completed").notNull().default(false),
+  pointsEarned: integer("points_earned").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ACHIEVEMENTS
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
+  achievementType: text("achievement_type").notNull(), // 'first_application', 'week_streak', 'month_streak', 'level_up', etc.
+  title: text("title").notNull(),
+  description: text("description"),
+  pointsAwarded: integer("points_awarded").notNull().default(0),
+  unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
+});
+
 
 // --- ZOD SCHEMAS ---
 
@@ -190,6 +239,51 @@ export const insertReminderSchema = createInsertSchema(reminders, {
   dueDate: z.string(),
 }).omit({ id: true, createdAt: true });
 export const updateReminderSchema = insertReminderSchema.partial();
+
+// Streak Schemas
+export const streakSchema = createSelectSchema(streaks, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  lastActivityDate: z.string().nullable(),
+});
+export const insertStreakSchema = createInsertSchema(streaks, {
+  userId: foreignKeysSchema.userId,
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateStreakSchema = insertStreakSchema.partial();
+
+// Daily Goal Schemas
+export const dailyGoalSchema = createSelectSchema(dailyGoals, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+});
+export const insertDailyGoalSchema = createInsertSchema(dailyGoals, {
+  userId: foreignKeysSchema.userId,
+  goalType: z.enum(['applications', 'behavioral_prep', 'technical_prep', 'system_design', 'coding_practice']),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateDailyGoalSchema = insertDailyGoalSchema.partial();
+
+// Daily Activity Schemas
+export const dailyActivitySchema = createSelectSchema(dailyActivities, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  activityDate: z.string(),
+});
+export const insertDailyActivitySchema = createInsertSchema(dailyActivities, {
+  userId: foreignKeysSchema.userId,
+  activityDate: z.string(),
+  goalType: z.enum(['applications', 'behavioral_prep', 'technical_prep', 'system_design', 'coding_practice']),
+}).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateDailyActivitySchema = insertDailyActivitySchema.partial();
+
+// Achievement Schemas
+export const achievementSchema = createSelectSchema(achievements, {
+  ...numberIdSchema,
+  userId: foreignKeysSchema.userId,
+  unlockedAt: z.string(),
+});
+export const insertAchievementSchema = createInsertSchema(achievements, {
+  userId: foreignKeysSchema.userId,
+}).omit({ id: true, unlockedAt: true });
 
 
 // --- RELATIONS ---
