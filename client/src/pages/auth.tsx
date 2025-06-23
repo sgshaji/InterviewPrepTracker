@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useAuth } from "../hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Navigate } from "react-router-dom";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AuthPage() {
-  const { user, isLoading, signIn, signUp, signInWithGoogle, resetPassword } = useSupabaseAuth();
+  const { user, isLoading, signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
   const [activeTab, setActiveTab] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);

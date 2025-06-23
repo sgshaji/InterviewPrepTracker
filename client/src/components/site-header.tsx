@@ -4,10 +4,10 @@ import { UserNav } from "./user-nav";
 import { MobileNav } from "./mobile-nav";
 import { buttonVariants } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useAuth } from '../hooks/use-auth';
 
 export function SiteHeader() {
-  const { user } = useSupabaseAuth();
+  const { user } = useAuth();
   
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">

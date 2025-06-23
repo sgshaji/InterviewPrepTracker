@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useAuth } from "../../hooks/use-auth";
 import { Loader2, Briefcase } from "lucide-react";
 
 export default function AuthCallbackPage() {
-  const { user, supabaseUser, isLoading } = useSupabaseAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     console.log('🔁 Auth callback page - Auth state:', { 
       user: user?.email, 
-      supabaseUser: supabaseUser?.email, 
       isLoading 
     });
 
@@ -21,7 +20,7 @@ export default function AuthCallbackPage() {
     }
 
     // If we have a user, redirect to home
-    if (!isLoading && user && supabaseUser) {
+    if (!isLoading && user) {
       console.log('✅ User authenticated, redirecting to home');
       navigate("/", { replace: true });
       return;
