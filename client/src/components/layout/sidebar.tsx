@@ -9,6 +9,7 @@ const navigation = [
   { name: "Preparation", href: "/preparation", icon: Book },
   { name: "Interviews", href: "/interviews", icon: Calendar },
   { name: "Self-Assessment", href: "/assessments", icon: ClipboardCheck },
+  { name: "Streaks & Goals", href: "/streaks", icon: Flame },
 ];
 
 export default function Sidebar() {
