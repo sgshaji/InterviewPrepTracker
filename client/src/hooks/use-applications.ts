@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from './use-toast'
 import { Application, applicationSchema, insertApplicationSchema } from '@shared/schema'
-import { useAuth } from './use-auth'
 import { api } from '@/utils/api'
 
 export { type Application }
@@ -45,10 +44,7 @@ export function useApplications(): UseApplicationsReturn {
     company: '',
     interviewing: false
   })
-  const { user } = useAuth()
-
   const loadApplications = useCallback(async (pageNum: number = 1, isLoadMore: boolean = false) => {
-    if (!user) return
     try {
       setLoading(true)
       setError(null)
@@ -86,7 +82,7 @@ export function useApplications(): UseApplicationsReturn {
     } finally {
       setLoading(false)
     }
-  }, [filters, user])
+  }, [filters])
 
   const setFilters = useCallback((newFilters: Partial<ApplicationFilters>) => {
     setFiltersState(prev => ({ ...prev, ...newFilters }))
@@ -102,11 +98,7 @@ export function useApplications(): UseApplicationsReturn {
   }, [loading, hasMore, page, loadApplications])
 
   const addApplication = useCallback(async (data?: Partial<Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
-    if (!user) {
-      toast({ title: 'Error', description: 'You must be logged in to add an application.', variant: 'destructive' })
-      return
-    }
-    const tempId = `temp-${Date.now()}`
+    const tempId = Date.now()
 
     const newApplicationData = {
       companyName: data?.companyName || '',
@@ -123,9 +115,9 @@ export function useApplications(): UseApplicationsReturn {
     const tempApplication: Application = {
       ...newApplicationData,
       id: tempId,
-      userId: user.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      userId: '550e8400-e29b-41d4-a716-446655440000',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
     
     try {
