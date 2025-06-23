@@ -27,7 +27,7 @@ export default function AuthCallbackPage() {
     }
 
     // If not loading and no user, redirect to login
-    if (!isLoading && !user && !supabaseUser) {
+    if (!isLoading && !user) {
       console.log('🚫 No user found, redirecting to login');
       navigate("/auth", { replace: true });
       return;
@@ -44,7 +44,7 @@ export default function AuthCallbackPage() {
     return () => {
       if (id) clearTimeout(id);
     };
-  }, [user, supabaseUser, isLoading, navigate]);
+  }, [user, isLoading, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
