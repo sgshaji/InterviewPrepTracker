@@ -1,0 +1,34 @@
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.447Z #_acquireLock lock released for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.447Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.447Z #_acquireLock begin -1
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.468Z #_autoRefreshTokenTick() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.468Z #_acquireLock begin 0
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #_acquireLock lock acquired for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #_useSession begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #__loadSession() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #getSession() session from storage null
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #__loadSession() end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z INITIAL_SESSION callback id 41c659dd-5e59-4353-b001-898017506fc3 session null
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #_acquireLock lock released for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.480Z #_useSession end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.481Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.483Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.483Z auto refresh token tick lock not available
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.484Z #_acquireLock lock acquired for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.484Z #_useSession begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.484Z #__loadSession() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.484Z #getSession() session from storage null
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.484Z #__loadSession() end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.485Z #_useSession end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.485Z #_acquireLock lock released for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.485Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.495Z #_acquireLock lock acquired for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z #_useSession begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z #__loadSession() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z #getSession() session from storage null
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z #__loadSession() end
+Auth state changed: INITIAL_SESSION undefined
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z INITIAL_SESSION callback id 21887dd2-8994-4ad7-86a1-c81f6160d9fd session null
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z #_acquireLock lock released for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.496Z #_useSession end
+GoTrueClient@0 (2.70.0) 2025-06-23T10:50:40.497Z #_acquireLock end
