@@ -16,6 +16,7 @@ import Applications from "@/pages/applications";
 import Preparation from "@/pages/preparation";
 import Interviews from "@/pages/interviews";
 import Assessments from "@/pages/assessments";
+import Streaks from "@/pages/streaks";
 
 function Router() {
   return (
@@ -70,6 +71,14 @@ function Router() {
                   element={
                     <ErrorBoundary>
                       <Assessments />
+                    </ErrorBoundary>
+                  }
+                />
+                <Route
+                  path="/streaks"
+                  element={
+                    <ErrorBoundary>
+                      <Streaks />
                     </ErrorBoundary>
                   }
                 />

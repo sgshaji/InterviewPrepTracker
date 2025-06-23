@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Briefcase, BarChart3, Book, Calendar, ClipboardCheck } from "lucide-react";
+import { Briefcase, BarChart3, Book, Calendar, ClipboardCheck, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navigation = [

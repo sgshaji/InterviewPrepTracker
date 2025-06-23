@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, streaks, dailyGoals, dailyActivities, achievements } from "./storage";
 import { cache } from "./cache";
 import { 
   insertApplicationSchema, 
@@ -929,12 +929,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
       
       const streak = await db.query.streaks.findFirst({
-        where: eq(storage.streaks.userId, userId)
+        where: eq(streaks.userId, userId)
       });
 
       if (!streak) {
         // Create initial streak record
-        const newStreak = await db.insert(storage.streaks).values({
+        const newStreak = await db.insert(streaks).values({
           userId,
           currentStreak: 0,
           longestStreak: 0,

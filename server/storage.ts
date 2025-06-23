@@ -567,3 +567,6 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// Export gamification tables for API routes
+export { streaks, dailyGoals, dailyActivities, achievements };
