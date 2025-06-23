@@ -31,7 +31,7 @@ function Router() {
             <ErrorBoundary>
               <Sidebar />
             </ErrorBoundary>
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-auto">
               <Routes>
                 <Route
                   path="/dashboard"
