@@ -18,13 +18,13 @@ export default function AuthCallback() {
         console.log('Search:', window.location.search);
         
         // First, check URL for error parameters from OAuth provider
-        const urlParams = new URLSearchParams(window.location.search);
-        const errorDescription = urlParams.get('error_description');
-        const errorCode = urlParams.get('error_code');
-        const error = urlParams.get('error');
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        const errorDescription = urlSearchParams.get('error_description');
+        const errorCode = urlSearchParams.get('error_code');
+        const error = urlSearchParams.get('error');
         
         if (error || errorDescription || errorCode) {
-          console.error('❌ OAuth error in URL:', { error, errorDescription, errorCode });
+          console.error('OAuth error in URL:', { error, errorDescription, errorCode });
           setStatus('error');
           
           // Provide specific error messages for common OAuth issues
@@ -40,40 +40,91 @@ export default function AuthCallback() {
           return;
         }
 
-        // Process the OAuth callback using Supabase's built-in session handler
-        const { data, error: sessionError } = await supabase.auth.getSession();
-        console.log('Initial session check:', data, sessionError);
-
-        // If no session yet, wait briefly for Supabase to process the callback
-        if (!data.session) {
-          console.log('No immediate session, waiting for Supabase to process callback...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        // Process OAuth callback directly
+        console.log('Processing OAuth callback from URL...');
+        
+        // Parse URL fragments and search params for auth tokens
+        const hashFragment = window.location.hash.substring(1);
+        const hashParams = new URLSearchParams(hashFragment);
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        console.log('Hash fragment:', hashFragment);
+        console.log('Search params:', window.location.search);
+        
+        // Check for OAuth tokens in URL
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const authCode = urlParams.get('code');
+        
+        if (accessToken || authCode) {
+          console.log('OAuth tokens found:', { accessToken: !!accessToken, authCode: !!authCode });
           
-          const { data: retryData, error: retryError } = await supabase.auth.getSession();
-          console.log('Retry session check:', retryData, retryError);
-          
-          if (retryData.session) {
-            console.log('Session found after retry, authentication successful');
-            setStatus('success');
-            setMessage('Authentication successful! Redirecting to dashboard...');
-            setTimeout(() => navigate('/dashboard'), 1500);
-            return;
+          if (accessToken && refreshToken) {
+            // Manually set the session using the tokens from URL
+            const { data, error } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken
+            });
+            
+            console.log('Manual session creation result:', data, error);
+            
+            if (error) {
+              console.error('Failed to create session from tokens:', error);
+              setStatus('error');
+              setMessage(`Authentication failed: ${error.message}`);
+              setTimeout(() => navigate('/auth'), 3000);
+              return;
+            }
+            
+            if (data.session) {
+              console.log('Session created successfully from OAuth tokens');
+              setStatus('success');
+              setMessage('Google authentication successful! Redirecting...');
+              
+              // Clear the URL hash to prevent re-processing
+              window.history.replaceState({}, document.title, window.location.pathname);
+              
+              setTimeout(() => navigate('/dashboard'), 1500);
+              return;
+            }
           }
-        } else {
-          console.log('Session found immediately, authentication successful');
-          setStatus('success');
-          setMessage('Authentication successful! Redirecting to dashboard...');
-          setTimeout(() => navigate('/dashboard'), 1500);
-          return;
+          
+          // If we have an auth code, let Supabase handle the exchange
+          if (authCode) {
+            console.log('Processing authorization code...');
+            // Wait for Supabase to process the code
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const { data, error } = await supabase.auth.getSession();
+            console.log('Session after code processing:', data, error);
+            
+            if (data.session) {
+              console.log('Session created from authorization code');
+              setStatus('success');
+              setMessage('Authentication successful! Redirecting...');
+              setTimeout(() => navigate('/dashboard'), 1500);
+              return;
+            }
+          }
         }
-
-        // If we get here, authentication didn't complete successfully
-        console.log('No session found, redirecting to auth page');
-        setStatus('error');
-        setMessage('Google authentication completed but session was not created. Please try again.');
-        setTimeout(() => navigate('/auth'), 3000);
+        
+        // Final check for any existing session
+        console.log('Checking for existing session...');
+        const { data: finalSession } = await supabase.auth.getSession();
+        
+        if (finalSession.session) {
+          console.log('Found existing session');
+          setStatus('success');
+          setMessage('Authentication successful! Redirecting...');
+          setTimeout(() => navigate('/dashboard'), 1500);
+        } else {
+          console.log('No session found, authentication failed');
+          setStatus('error');
+          setMessage('Google authentication completed but session could not be created. Please try again.');
+          setTimeout(() => navigate('/auth'), 3000);
+        }
       } catch (error: any) {
-        console.error('💥 Unexpected auth callback error:', error);
+        console.error('Unexpected auth callback error:', error);
         setStatus('error');
         setMessage('An unexpected error occurred');
         setTimeout(() => navigate('/auth'), 3000);
