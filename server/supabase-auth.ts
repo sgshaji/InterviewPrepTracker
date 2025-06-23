@@ -63,7 +63,13 @@ type ExpressRequest = Request & {
 // Initialize Supabase admin client for server-side operations
 const supabaseAdmin = createClient(
   process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY!
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
 );
 
 export function setupSupabaseAuth(app: any) {
@@ -105,20 +111,32 @@ const getUserFromAuthUser = (authUser: any): Express.User => {
 // Middleware to authenticate requests using Supabase JWT
 export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
+    console.log('🔐 Auth middleware - checking authorization header');
+    
     // Get the JWT from the Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ Auth middleware - no authorization header found');
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
+    console.log('🔑 Auth middleware - token found, length:', token.length);
 
     // Verify the JWT and get the auth user
     const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
 
-    if (error || !authUser) {
+    if (error) {
+      console.error('❌ Auth middleware - token verification failed:', error.message);
       return res.status(401).json({ error: 'Invalid token' });
     }
+
+    if (!authUser) {
+      console.log('❌ Auth middleware - no user found in token');
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    console.log('✅ Auth middleware - user authenticated:', authUser.email);
 
     // Convert auth user to Express user format
     const user = getUserFromAuthUser(authUser);
@@ -133,7 +151,7 @@ export const requireAuth = async (req: ExpressRequest, res: Response, next: Next
 
     next();
   } catch (error) {
-    console.error('Error in requireAuth middleware:', error);
+    console.error('💥 Error in requireAuth middleware:', error);
     res.status(500).json({ error: 'Authentication failed' });
   }
 };

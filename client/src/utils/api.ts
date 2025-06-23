@@ -9,7 +9,10 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
   
   if (session?.access_token) {
+    console.log('🔑 Adding auth token to request headers');
     baseHeaders['Authorization'] = `Bearer ${session.access_token}`;
+  } else {
+    console.warn('⚠️ No access token found in session');
   }
   
   return baseHeaders;
@@ -18,10 +21,12 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 export const api = {
   async get<T>(endpoint: string): Promise<T> {
     const headers = await getAuthHeaders();
+    console.log('📡 Making API request to:', `${API_BASE_URL}${endpoint}`);
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers
     });
     if (!response.ok) {
+      console.error('❌ API request failed:', response.status, response.statusText);
       throw new Error(`API error: ${response.statusText}`);
     }
     return response.json();
