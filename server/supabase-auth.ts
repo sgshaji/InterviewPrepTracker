@@ -111,9 +111,7 @@ const getUserFromAuthUser = (authUser: any): Express.User => {
 // Middleware to authenticate requests using Supabase JWT
 export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
-    console.log('Auth middleware - checking authentication');
-    console.log('Query parameters:', Object.keys(req.query));
-    console.log('Auth token in query:', req.query.auth_token ? 'Present' : 'Missing');
+    // Authentication via query parameter (bypasses header filtering in Replit environment)
     
     // Try query parameter first (to bypass header filtering), then fallback to headers
     let token = req.query.auth_token as string;
