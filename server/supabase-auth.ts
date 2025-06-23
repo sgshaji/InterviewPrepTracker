@@ -111,32 +111,34 @@ const getUserFromAuthUser = (authUser: any): Express.User => {
 // Middleware to authenticate requests using Supabase JWT
 export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
-    console.log('🔐 Auth middleware - checking authorization header');
+    console.log('Auth middleware - checking request headers');
+    console.log('Available headers:', Object.keys(req.headers));
+    console.log('Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
     
     // Get the JWT from the Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('❌ Auth middleware - no authorization header found');
+      console.log('Auth middleware - no valid authorization header found');
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
-    console.log('🔑 Auth middleware - token found, length:', token.length);
+    console.log('Auth middleware - token found, length:', token.length);
 
     // Verify the JWT and get the auth user
     const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error) {
-      console.error('❌ Auth middleware - token verification failed:', error.message);
+      console.error('Auth middleware - token verification failed:', error.message);
       return res.status(401).json({ error: 'Invalid token' });
     }
 
     if (!authUser) {
-      console.log('❌ Auth middleware - no user found in token');
+      console.log('Auth middleware - no user found in token');
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    console.log('✅ Auth middleware - user authenticated:', authUser.email);
+    console.log('Auth middleware - user authenticated:', authUser.email);
 
     // Convert auth user to Express user format
     const user = getUserFromAuthUser(authUser);
@@ -151,7 +153,7 @@ export const requireAuth = async (req: ExpressRequest, res: Response, next: Next
 
     next();
   } catch (error) {
-    console.error('💥 Error in requireAuth middleware:', error);
+    console.error('Error in requireAuth middleware:', error);
     res.status(500).json({ error: 'Authentication failed' });
   }
 };

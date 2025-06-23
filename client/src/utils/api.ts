@@ -9,10 +9,12 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   };
   
   if (session?.access_token) {
-    console.log('🔑 Adding auth token to request headers');
+    console.log('Adding auth token to request headers');
     baseHeaders['Authorization'] = `Bearer ${session.access_token}`;
+    console.log('Token preview:', session.access_token.substring(0, 20) + '...');
   } else {
-    console.warn('⚠️ No access token found in session');
+    console.warn('No access token found in session');
+    console.log('Session data:', session ? 'Session exists but no access_token' : 'No session');
   }
   
   return baseHeaders;
@@ -21,12 +23,18 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 export const api = {
   async get<T>(endpoint: string): Promise<T> {
     const headers = await getAuthHeaders();
-    console.log('📡 Making API request to:', `${API_BASE_URL}${endpoint}`);
+    console.log('Making API request to:', `${API_BASE_URL}${endpoint}`);
+    console.log('Request headers:', Object.keys(headers));
+    console.log('Has Authorization header:', 'Authorization' in headers);
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers
+      method: 'GET',
+      headers,
+      credentials: 'include'
     });
+    
     if (!response.ok) {
-      console.error('❌ API request failed:', response.status, response.statusText);
+      console.error('API request failed:', response.status, response.statusText);
       throw new Error(`API error: ${response.statusText}`);
     }
     return response.json();
