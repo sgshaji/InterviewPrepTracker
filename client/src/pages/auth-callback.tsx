@@ -40,51 +40,38 @@ export default function AuthCallback() {
           return;
         }
 
-        // Get the URL hash which contains auth tokens from Supabase
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        console.log('URL hash params:', Object.fromEntries(hashParams));
-        
-        // Handle Supabase auth callback with URL hash
-        const { data, error: supabaseError } = await supabase.auth.getSession();
-        console.log('Current session data:', data);
-        
-        if (supabaseError) {
-          console.error('Supabase auth callback error:', supabaseError);
-          setStatus('error');
-          setMessage(supabaseError.message || 'Authentication failed');
-          setTimeout(() => navigate('/auth'), 3000);
+        // Process the OAuth callback using Supabase's built-in session handler
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        console.log('Initial session check:', data, sessionError);
+
+        // If no session yet, wait briefly for Supabase to process the callback
+        if (!data.session) {
+          console.log('No immediate session, waiting for Supabase to process callback...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const { data: retryData, error: retryError } = await supabase.auth.getSession();
+          console.log('Retry session check:', retryData, retryError);
+          
+          if (retryData.session) {
+            console.log('Session found after retry, authentication successful');
+            setStatus('success');
+            setMessage('Authentication successful! Redirecting to dashboard...');
+            setTimeout(() => navigate('/dashboard'), 1500);
+            return;
+          }
+        } else {
+          console.log('Session found immediately, authentication successful');
+          setStatus('success');
+          setMessage('Authentication successful! Redirecting to dashboard...');
+          setTimeout(() => navigate('/dashboard'), 1500);
           return;
         }
 
-        // If no current session, try to get session from URL
-        if (!data.session) {
-          console.log('No current session, checking URL for auth tokens...');
-          const { data: authData, error: authError } = await supabase.auth.getUser();
-          console.log('Auth data from URL:', authData, 'Error:', authError);
-          
-          if (authError) {
-            console.error('Failed to get user from URL:', authError);
-            setStatus('error');
-            setMessage('Failed to complete authentication');
-            setTimeout(() => navigate('/auth'), 3000);
-            return;
-          }
-        }
-
-        // Check session again after processing URL
-        const { data: finalData } = await supabase.auth.getSession();
-        
-        if (finalData.session) {
-          console.log('Authentication successful, session found');
-          setStatus('success');
-          setMessage('Authentication successful! Redirecting to dashboard...');
-          setTimeout(() => navigate('/dashboard'), 2000);
-        } else {
-          console.log('No session found after callback processing');
-          setStatus('error');
-          setMessage('Authentication completed but no session created. Please try signing in again.');
-          setTimeout(() => navigate('/auth'), 3000);
-        }
+        // If we get here, authentication didn't complete successfully
+        console.log('No session found, redirecting to auth page');
+        setStatus('error');
+        setMessage('Google authentication completed but session was not created. Please try again.');
+        setTimeout(() => navigate('/auth'), 3000);
       } catch (error: any) {
         console.error('💥 Unexpected auth callback error:', error);
         setStatus('error');
