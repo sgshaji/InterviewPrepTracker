@@ -9,11 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
+import { useAuth } from '../hooks/use-auth';
 import { Link } from 'react-router-dom';
 
 export function UserNav() {
-  const { user, signOut } = useSupabaseAuth();
+  const { user, signOut } = useAuth();
 
   if (!user) {
     return null;

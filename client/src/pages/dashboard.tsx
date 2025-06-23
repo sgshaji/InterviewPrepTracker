@@ -22,7 +22,7 @@ import { Application, Interview, PreparationSession } from "@shared/schema";
 import { useNavigate } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, isWithinInterval, addDays, differenceInDays } from "date-fns";
 import { api } from "@/utils/api";
-import { useSupabaseAuth } from "@/hooks/use-supabase-auth";
+import { useAuth } from "../hooks/use-auth";
 
 // Direct Clearbit logo component matching applications page
 function DirectCompanyLogo({ companyName }: { companyName: string }) {
@@ -128,16 +128,16 @@ type Achievement = {
 };
 
 export default function Dashboard() {
-  const { user } = useSupabaseAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user === null) {
-      navigate("/login");
+    if (!isAuthenticated) {
+      navigate("/auth");
     }
-  }, [user, navigate]);
+  }, [isAuthenticated, navigate]);
   
-  if (user === null) return (
+  if (!isAuthenticated) return (
     <div className="flex items-center justify-center h-screen">
       <span className="text-sm text-gray-500">Checking authentication...</span>
     </div>

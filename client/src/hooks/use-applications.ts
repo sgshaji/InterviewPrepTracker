@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from './use-toast'
 import { Application, applicationSchema, insertApplicationSchema } from '@shared/schema'
-import { useSupabaseAuth } from '@/hooks/use-supabase-auth'
+import { useAuth } from './use-auth'
 import { authorizedFetch } from '@/api/authorizedFetch'
 
 export { type Application }
@@ -45,7 +45,7 @@ export function useApplications(): UseApplicationsReturn {
     company: '',
     interviewing: false
   })
-  const { user } = useSupabaseAuth()
+  const { user } = useAuth()
 
   const loadApplications = useCallback(async (pageNum: number = 1, isLoadMore: boolean = false) => {
     if (!user) return

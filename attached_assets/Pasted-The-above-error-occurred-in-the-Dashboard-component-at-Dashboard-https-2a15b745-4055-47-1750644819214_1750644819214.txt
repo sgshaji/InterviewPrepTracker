@@ -1,0 +1,25 @@
+The above error occurred in the <Dashboard> component:
+
+    at Dashboard (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/src/pages/dashboard.tsx:132:20)
+    at ErrorBoundary (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/src/components/error-boundary.tsx:8:1)
+    at ProtectedRoute (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/src/lib/protected-route.tsx:21:34)
+    at RenderedRoute (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=39da11a3:5455:26)
+    at Routes (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=39da11a3:6188:3)
+    at div
+    at div
+    at RenderedRoute (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=39da11a3:5455:26)
+    at Routes (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=39da11a3:6188:3)
+    at Router
+    at Provider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-3RXG37ZK.js?v=39da11a3:38:15)
+    at Provider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-3RXG37ZK.js?v=39da11a3:38:15)
+    at CollectionProvider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-WM6SXSWM.js?v=39da11a3:29:13)
+    at ToastProvider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-toast.js?v=39da11a3:55:5)
+    at Provider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-3RXG37ZK.js?v=39da11a3:38:15)
+    at TooltipProvider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=39da11a3:61:5)
+    at AuthProvider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/src/hooks/use-auth.tsx:22:32)
+    at QueryClientProvider (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=39da11a3:2805:3)
+    at App
+    at Router (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=39da11a3:6131:13)
+    at BrowserRouter (https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-router-dom.js?v=39da11a3:9117:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary.
