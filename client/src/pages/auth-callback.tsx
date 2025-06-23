@@ -12,38 +12,55 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        console.log('🔄 Processing auth callback...');
         
-        if (error) {
-          console.error('Auth callback error:', error);
+        // First, check URL for error parameters from OAuth provider
+        const urlParams = new URLSearchParams(window.location.search);
+        const errorDescription = urlParams.get('error_description');
+        const errorCode = urlParams.get('error_code');
+        const error = urlParams.get('error');
+        
+        if (error || errorDescription || errorCode) {
+          console.error('❌ OAuth error in URL:', { error, errorDescription, errorCode });
           setStatus('error');
-          setMessage(error.message || 'Authentication failed');
+          
+          // Provide specific error messages for common OAuth issues
+          if (error === 'access_denied') {
+            setMessage('Google authentication was cancelled. Please try again.');
+          } else if (errorDescription?.includes('unauthorized_client')) {
+            setMessage('Google OAuth is not properly configured. Please contact support.');
+          } else {
+            setMessage(errorDescription || 'Authentication failed');
+          }
+          
+          setTimeout(() => navigate('/auth'), 4000);
+          return;
+        }
+
+        // Handle Supabase auth callback
+        const { data, error: supabaseError } = await supabase.auth.getSession();
+        
+        if (supabaseError) {
+          console.error('💥 Supabase auth callback error:', supabaseError);
+          setStatus('error');
+          setMessage(supabaseError.message || 'Authentication failed');
           setTimeout(() => navigate('/auth'), 3000);
           return;
         }
 
         if (data.session) {
+          console.log('✅ Authentication successful, session found');
           setStatus('success');
           setMessage('Authentication successful! Redirecting to dashboard...');
           setTimeout(() => navigate('/dashboard'), 2000);
         } else {
-          // Check URL for error parameters
-          const urlParams = new URLSearchParams(window.location.search);
-          const errorDescription = urlParams.get('error_description');
-          const error_code = urlParams.get('error_code');
-          
-          if (errorDescription || error_code) {
-            setStatus('error');
-            setMessage(errorDescription || 'Authentication failed');
-            setTimeout(() => navigate('/auth'), 3000);
-          } else {
-            setStatus('success');
-            setMessage('Email confirmed! Please sign in to continue.');
-            setTimeout(() => navigate('/auth'), 2000);
-          }
+          console.log('📧 No session found, likely email confirmation');
+          setStatus('success');
+          setMessage('Email confirmed! Please sign in to continue.');
+          setTimeout(() => navigate('/auth'), 2000);
         }
       } catch (error: any) {
-        console.error('Unexpected auth callback error:', error);
+        console.error('💥 Unexpected auth callback error:', error);
         setStatus('error');
         setMessage('An unexpected error occurred');
         setTimeout(() => navigate('/auth'), 3000);

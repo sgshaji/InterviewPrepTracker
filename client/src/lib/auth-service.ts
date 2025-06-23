@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { User } from '@supabase/supabase-js';
 
 export interface AuthUser {
   id: string;
@@ -134,18 +133,34 @@ class AuthService {
   // Sign in with Google OAuth
   async signInWithGoogle() {
     try {
+      console.log('🔐 Starting Google OAuth sign in...');
+      
+      // Get the current URL origin
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/auth/callback`;
+      
+      console.log('🔗 OAuth redirect URL:', redirectTo);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Google OAuth error:', error);
+        throw error;
+      }
 
+      console.log('✅ Google OAuth initiated successfully');
       return { data, error: null };
     } catch (error: any) {
-      console.error('Google sign in error:', error);
+      console.error('💥 Google sign in failed:', error);
       return {
         data: null,
         error: error.message || 'Failed to sign in with Google'
