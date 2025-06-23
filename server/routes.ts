@@ -923,6 +923,295 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // STREAKS & GAMIFICATION API ROUTES
+  app.get("/api/streaks", async (req: Request, res: Response) => {
+    try {
+      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      
+      const streak = await db.query.streaks.findFirst({
+        where: eq(storage.streaks.userId, userId)
+      });
+
+      if (!streak) {
+        // Create initial streak record
+        const newStreak = await db.insert(storage.streaks).values({
+          userId,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPoints: 0,
+          level: 1
+        }).returning();
+        return res.json(newStreak[0]);
+      }
+
+      res.json(streak);
+    } catch (error) {
+      console.error('Error fetching streak:', error);
+      res.status(500).json({ error: 'Failed to fetch streak data' });
+    }
+  });
+
+  app.get("/api/daily-goals", async (req: Request, res: Response) => {
+    try {
+      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      
+      const goals = await db.query.dailyGoals.findMany({
+        where: and(
+          eq(storage.dailyGoals.userId, userId),
+          eq(storage.dailyGoals.isActive, true)
+        )
+      });
+
+      res.json(goals);
+    } catch (error) {
+      console.error('Error fetching daily goals:', error);
+      res.status(500).json({ error: 'Failed to fetch daily goals' });
+    }
+  });
+
+  app.post("/api/daily-goals", async (req: Request, res: Response) => {
+    try {
+      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      const { goalType, targetCount } = req.body;
+
+      const newGoal = await db.insert(storage.dailyGoals).values({
+        userId,
+        goalType,
+        targetCount,
+        isActive: true
+      }).returning();
+
+      res.json(newGoal[0]);
+    } catch (error) {
+      console.error('Error creating daily goal:', error);
+      res.status(500).json({ error: 'Failed to create daily goal' });
+    }
+  });
+
+  app.get("/api/daily-activities", async (req: Request, res: Response) => {
+    try {
+      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      const { date } = req.query;
+
+      const activities = await db.query.dailyActivities.findMany({
+        where: and(
+          eq(storage.dailyActivities.userId, userId),
+          eq(storage.dailyActivities.activityDate, date as string)
+        )
+      });
+
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching daily activities:', error);
+      res.status(500).json({ error: 'Failed to fetch daily activities' });
+    }
+  });
+
+  app.post("/api/daily-activities", async (req: Request, res: Response) => {
+    try {
+      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      const { activityDate, goalType, completedCount } = req.body;
+
+      // Get the goal to determine target count
+      const goal = await db.query.dailyGoals.findFirst({
+        where: and(
+          eq(storage.dailyGoals.userId, userId),
+          eq(storage.dailyGoals.goalType, goalType),
+          eq(storage.dailyGoals.isActive, true)
+        )
+      });
+
+      if (!goal) {
+        return res.status(404).json({ error: 'Goal not found' });
+      }
+
+      // Check if activity already exists for today
+      const existingActivity = await db.query.dailyActivities.findFirst({
+        where: and(
+          eq(storage.dailyActivities.userId, userId),
+          eq(storage.dailyActivities.activityDate, activityDate),
+          eq(storage.dailyActivities.goalType, goalType)
+        )
+      });
+
+      const pointsMap = {
+        'applications': 10,
+        'behavioral_prep': 15,
+        'technical_prep': 20,
+        'system_design': 25,
+        'coding_practice': 20
+      };
+
+      if (existingActivity) {
+        // Update existing activity
+        const newCompleted = existingActivity.completedCount + completedCount;
+        const isCompleted = newCompleted >= goal.targetCount;
+        const pointsEarned = isCompleted && !existingActivity.isCompleted ? 
+          pointsMap[goalType as keyof typeof pointsMap] : 0;
+
+        const updated = await db.update(storage.dailyActivities)
+          .set({
+            completedCount: newCompleted,
+            isCompleted,
+            pointsEarned: existingActivity.pointsEarned + pointsEarned
+          })
+          .where(eq(storage.dailyActivities.id, existingActivity.id))
+          .returning();
+
+        // Update streak and points if goal completed
+        if (pointsEarned > 0) {
+          await updateStreak(userId, pointsEarned);
+        }
+
+        res.json(updated[0]);
+      } else {
+        // Create new activity
+        const isCompleted = completedCount >= goal.targetCount;
+        const pointsEarned = isCompleted ? pointsMap[goalType as keyof typeof pointsMap] : 0;
+
+        const newActivity = await db.insert(storage.dailyActivities).values({
+          userId,
+          activityDate,
+          goalType,
+          completedCount,
+          targetCount: goal.targetCount,
+          isCompleted,
+          pointsEarned
+        }).returning();
+
+        // Update streak and points if goal completed
+        if (pointsEarned > 0) {
+          await updateStreak(userId, pointsEarned);
+        }
+
+        res.json(newActivity[0]);
+      }
+    } catch (error) {
+      console.error('Error logging daily activity:', error);
+      res.status(500).json({ error: 'Failed to log daily activity' });
+    }
+  });
+
+  app.get("/api/achievements", async (req: Request, res: Response) => {
+    try {
+      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      
+      const achievements = await db.query.achievements.findMany({
+        where: eq(storage.achievements.userId, userId),
+        orderBy: desc(storage.achievements.unlockedAt)
+      });
+
+      res.json(achievements);
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      res.status(500).json({ error: 'Failed to fetch achievements' });
+    }
+  });
+
+  // Helper function to update streak
+  async function updateStreak(userId: string, pointsEarned: number) {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const streak = await db.query.streaks.findFirst({
+      where: eq(storage.streaks.userId, userId)
+    });
+
+    if (streak) {
+      const lastActivityDate = streak.lastActivityDate;
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      let newCurrentStreak = streak.currentStreak;
+      
+      // Check if this is a consecutive day
+      if (lastActivityDate === yesterdayStr) {
+        newCurrentStreak += 1;
+      } else if (lastActivityDate !== today) {
+        newCurrentStreak = 1; // Reset streak if gap
+      }
+
+      const newLongestStreak = Math.max(streak.longestStreak, newCurrentStreak);
+      const newLevel = Math.floor((streak.totalPoints + pointsEarned) / 100) + 1;
+
+      await db.update(storage.streaks)
+        .set({
+          currentStreak: newCurrentStreak,
+          longestStreak: newLongestStreak,
+          lastActivityDate: today,
+          totalPoints: streak.totalPoints + pointsEarned,
+          level: newLevel
+        })
+        .where(eq(storage.streaks.id, streak.id));
+
+      // Check for achievements
+      await checkAchievements(userId, newCurrentStreak, newLevel, streak.totalPoints + pointsEarned);
+    }
+  }
+
+  // Helper function to check and award achievements
+  async function checkAchievements(userId: string, currentStreak: number, level: number, totalPoints: number) {
+    const achievementsToAward = [];
+
+    // First streak achievement
+    if (currentStreak === 1) {
+      achievementsToAward.push({
+        userId,
+        achievementType: 'first_streak',
+        title: 'Getting Started!',
+        description: 'Completed your first daily goal',
+        pointsAwarded: 25
+      });
+    }
+
+    // Week streak achievement
+    if (currentStreak === 7) {
+      achievementsToAward.push({
+        userId,
+        achievementType: 'week_streak',
+        title: 'Week Warrior',
+        description: 'Maintained a 7-day streak',
+        pointsAwarded: 100
+      });
+    }
+
+    // Month streak achievement
+    if (currentStreak === 30) {
+      achievementsToAward.push({
+        userId,
+        achievementType: 'month_streak',
+        title: 'Monthly Master',
+        description: 'Incredible 30-day streak!',
+        pointsAwarded: 500
+      });
+    }
+
+    // Level up achievements
+    if (level > 1) {
+      const existingLevelAchievement = await db.query.achievements.findFirst({
+        where: and(
+          eq(storage.achievements.userId, userId),
+          eq(storage.achievements.achievementType, `level_${level}`)
+        )
+      });
+
+      if (!existingLevelAchievement) {
+        achievementsToAward.push({
+          userId,
+          achievementType: `level_${level}`,
+          title: `Level ${level} Achieved!`,
+          description: `You've reached level ${level}`,
+          pointsAwarded: level * 50
+        });
+      }
+    }
+
+    // Award achievements
+    for (const achievement of achievementsToAward) {
+      await db.insert(storage.achievements).values(achievement);
+    }
+  }
+
   const httpServer = createServer(app);
   return httpServer;
 }
