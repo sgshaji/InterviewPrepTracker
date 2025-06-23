@@ -791,9 +791,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.headers['x-user-id'] as string || 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
       console.log('Auth middleware - authenticated static user: sgshaji@gmail.com');
       
-      const stats = await storage.getDashboardStats(userId);
+      // Get applications count from Supabase
+      const appsResponse = await fetch(`${process.env.VITE_SUPABASE_URL}/rest/v1/applications?select=id,job_status&user_id=eq.${userId}`, {
+        headers: {
+          'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const applications = await appsResponse.json();
+      const totalApplications = applications.length;
+      
+      // Calculate success rate (offers / total applications)
+      const offerCount = applications.filter((app: any) => 
+        app.job_status === 'Offer' || app.job_status === 'Accepted'
+      ).length;
+      const successRate = totalApplications > 0 ? Math.round((offerCount / totalApplications) * 100) : 0;
+      
+      // Get interviews count from Supabase  
+      const interviewsResponse = await fetch(`${process.env.VITE_SUPABASE_URL}/rest/v1/interviews?select=id,status&user_id=eq.${userId}`, {
+        headers: {
+          'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${process.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const interviews = await interviewsResponse.json();
+      const activeInterviews = interviews.filter((interview: any) => 
+        interview.status !== 'Completed' && interview.status !== 'Cancelled'
+      ).length;
+      
+      // For now, return basic stats with real data
+      const stats = {
+        totalApplications,
+        activeInterviews,
+        prepStreak: 0, // Will calculate from prep sessions later
+        successRate
+      };
+      
       res.json(stats);
     } catch (error) {
+      console.error('Dashboard stats error:', error);
       res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });

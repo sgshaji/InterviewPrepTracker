@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Application } from "@shared/schema";
+import { api } from "@/utils/api";
 
 // Color scheme for consistent visual hierarchy
 const colors = {
@@ -164,20 +165,13 @@ function calculateConversionRates(applications: Application[]) {
   };
 }
 
-export default function ApplicationFunnelChart() {
+interface ApplicationFunnelChartProps {
+  applications?: Application[];
+}
+
+export default function ApplicationFunnelChart({ applications = [] }: ApplicationFunnelChartProps) {
   const [width, setWidth] = useState(700);
-
-  const { data: applicationsData } = useQuery<{ totalCount: number; applications: Application[] }>({
-    queryKey: ["/api/applications"],
-    queryFn: async () => {
-      const res = await fetch("/api/applications?limit=50000");
-      if (!res.ok) throw new Error("Failed to fetch applications");
-      return res.json();
-    },
-  });
-
-  const applications = applicationsData?.applications || [];
-  const totalCount = applicationsData?.totalCount || 0;
+  const totalCount = applications.length;
   const { nodes, links, nodeColors } = calculateSankeyData(applications);
   const conversionRates = calculateConversionRates(applications);
 
