@@ -4,24 +4,23 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "../shared/schema";
 
-// Construct Supabase database connection string
+// Configure Supabase database connection using correct format
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  throw new Error("Supabase configuration missing");
+if (!SUPABASE_URL || !SUPABASE_DB_PASSWORD) {
+  throw new Error("Supabase configuration missing: VITE_SUPABASE_URL or SUPABASE_DB_PASSWORD");
 }
 
 // Extract project reference from Supabase URL
 const projectRef = SUPABASE_URL.replace('https://', '').replace('.supabase.co', '');
 
-// Use standard PostgreSQL connection format for Supabase
-const SUPABASE_DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;
-const SUPABASE_DB_URL = `postgresql://postgres:${SUPABASE_DB_PASSWORD}@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require`;
+// Use Supabase pooler connection with correct format
+const SUPABASE_DB_URL = `postgresql://postgres.${projectRef}:${SUPABASE_DB_PASSWORD}@aws-0-us-west-1.pooler.supabase.com:6543/postgres`;
 
 console.log("Supabase database configuration:", {
   projectRef,
-  url: `db.${projectRef}.supabase.co`,
+  url: `aws-0-us-west-1.pooler.supabase.com`,
   connected: "✓"
 });
 
