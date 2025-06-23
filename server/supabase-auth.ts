@@ -111,10 +111,15 @@ const getUserFromAuthUser = (authUser: any): Express.User => {
 // Middleware to authenticate requests using Supabase JWT
 export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
-    // Authentication via query parameter (bypasses header filtering in Replit environment)
+    // Authentication via multiple methods (bypasses header filtering in Replit environment)
     
-    // Try query parameter first (to bypass header filtering), then fallback to headers
     let token = req.query.auth_token as string;
+    
+    // Check request body for POST requests with X-HTTP-Method-Override
+    if (!token && req.body && req.body.auth_token) {
+      token = req.body.auth_token;
+      console.log('Auth middleware - token found in request body');
+    }
     
     if (!token) {
       // Fallback to X-Auth-Token header
@@ -134,7 +139,7 @@ export const requireAuth = async (req: ExpressRequest, res: Response, next: Next
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    console.log('Auth middleware - token found, length:', token.length);
+    console.log('Auth middleware - token found, length:', token.length, 'starts with:', token.substring(0, 10));
 
     // Verify the JWT and get the auth user
     const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
