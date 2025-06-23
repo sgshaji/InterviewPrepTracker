@@ -30,16 +30,26 @@ Your Google OAuth login is implemented and ready to use. Follow these steps to c
    - **Client Secret**: Paste from Google Cloud Console
 6. Save the configuration
 
-## Step 3: Configure Site URLs
+## Step 3: Configure Site URLs (CRITICAL FOR REPLIT)
 
 1. In Supabase, go to "Authentication" → "URL Configuration"
 2. Set the following URLs:
-   - **Site URL**: `http://localhost:5000` (development)
+   - **Site URL**: `https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev`
    - **Redirect URLs**: 
      ```
+     https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/auth/callback
      http://localhost:5000/auth/callback
-     https://your-replit-app.replit.app/auth/callback
      ```
+
+## Step 4: Update Google Cloud Console
+
+1. In Google Cloud Console, go to "APIs & Services" → "Credentials"
+2. Edit your OAuth 2.0 Client ID
+3. Add authorized redirect URIs:
+   ```
+   https://bzukbciiqwdckzmwarku.supabase.co/auth/v1/callback
+   https://2a15b745-4055-4717-96fa-6cd21cde5b85-00-2wtaj08lq9s3o.worf.replit.dev/auth/callback
+   ```
 
 ## Step 4: Test Google OAuth
 
