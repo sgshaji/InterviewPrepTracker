@@ -1,9 +1,7 @@
 import { Sankey, Tooltip } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Application } from "@shared/schema";
-import { api } from "@/utils/api";
 
 // Color scheme for consistent visual hierarchy
 const colors = {

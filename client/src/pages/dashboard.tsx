@@ -588,7 +588,7 @@ export default function Dashboard() {
         </div>
 
         {/* Application Funnel Section */}
-        <ApplicationFunnelChart />
+        <ApplicationFunnelChart applications={applications} />
 
         {/* Enhanced Tables Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
