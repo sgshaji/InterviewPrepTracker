@@ -84,6 +84,26 @@ export interface IStorage {
   }>;
   getWeeklyPrepTime(userId: string): Promise<{ date: string; hours: number }[]>;
   getConfidenceTrends(userId: string): Promise<{ topic: string; score: number }[]>;
+
+  // Gamification - Streaks
+  getStreak(userId: string): Promise<any>;
+  updateStreak(userId: string, data: any): Promise<any>;
+  
+  // Gamification - Daily Goals
+  getDailyGoals(userId: string): Promise<any[]>;
+  createDailyGoal(goal: any): Promise<any>;
+  updateDailyGoal(id: string, goal: any): Promise<any>;
+  deleteDailyGoal(id: string): Promise<void>;
+  
+  // Gamification - Daily Activities
+  getDailyActivities(userId: string, date?: string): Promise<any[]>;
+  createDailyActivity(activity: any): Promise<any>;
+  updateDailyActivity(id: string, activity: any): Promise<any>;
+  
+  // Gamification - Achievements
+  getAchievements(userId: string): Promise<any[]>;
+  createAchievement(achievement: any): Promise<any>;
+  checkAndUnlockAchievements(userId: string): Promise<any[]>;
 }
 
 // Initialize Supabase admin client for server-side operations
@@ -563,6 +583,212 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting confidence trends:', error);
       return [];
     }
+  }
+
+  // Gamification Implementation
+  async getStreak(userId: string) {
+    try {
+      const cacheKey = cache.generateKey('streak', userId);
+      const cached = await cache.get(cacheKey);
+      if (cached) return cached;
+
+      const result = await db.select().from(streaks).where(eq(streaks.userId, userId));
+      
+      if (result.length === 0) {
+        // Create initial streak record
+        const newStreak = await db.insert(streaks).values({
+          userId,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalPoints: 0,
+          level: 1
+        }).returning();
+        await cache.set(cacheKey, newStreak[0]);
+        return newStreak[0];
+      }
+
+      await cache.set(cacheKey, result[0]);
+      return result[0];
+    } catch (error) {
+      console.error('Error getting streak:', error);
+      throw error;
+    }
+  }
+
+  async updateStreak(userId: string, data: any) {
+    try {
+      const result = await db.update(streaks)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(streaks.userId, userId))
+        .returning();
+
+      const cacheKey = cache.generateKey('streak', userId);
+      await cache.del(cacheKey);
+      
+      return result[0];
+    } catch (error) {
+      console.error('Error updating streak:', error);
+      throw error;
+    }
+  }
+
+  async getDailyGoals(userId: string) {
+    try {
+      const cacheKey = cache.generateKey('daily-goals', userId);
+      const cached = await cache.get(cacheKey);
+      if (cached) return cached;
+
+      const result = await db.select().from(dailyGoals)
+        .where(and(eq(dailyGoals.userId, userId), eq(dailyGoals.isActive, true)))
+        .orderBy(desc(dailyGoals.createdAt));
+
+      await cache.set(cacheKey, result, 300); // 5 minute cache
+      return result;
+    } catch (error) {
+      console.error('Error getting daily goals:', error);
+      throw error;
+    }
+  }
+
+  async createDailyGoal(goal: any) {
+    try {
+      const result = await db.insert(dailyGoals).values({
+        ...goal,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      // Clear cache
+      const cacheKey = cache.generateKey('daily-goals', goal.userId);
+      await cache.del(cacheKey);
+
+      return result[0];
+    } catch (error) {
+      console.error('Error creating daily goal:', error);
+      throw error;
+    }
+  }
+
+  async updateDailyGoal(id: string, goal: any) {
+    try {
+      const result = await db.update(dailyGoals)
+        .set({ ...goal, updatedAt: new Date() })
+        .where(eq(dailyGoals.id, parseInt(id)))
+        .returning();
+
+      return result[0];
+    } catch (error) {
+      console.error('Error updating daily goal:', error);
+      throw error;
+    }
+  }
+
+  async deleteDailyGoal(id: string) {
+    try {
+      await db.update(dailyGoals)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(dailyGoals.id, parseInt(id)));
+    } catch (error) {
+      console.error('Error deleting daily goal:', error);
+      throw error;
+    }
+  }
+
+  async getDailyActivities(userId: string, date?: string) {
+    try {
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      const cacheKey = cache.generateKey('daily-activities', userId, targetDate);
+      const cached = await cache.get(cacheKey);
+      if (cached) return cached;
+
+      const result = await db.select().from(dailyActivities)
+        .where(and(
+          eq(dailyActivities.userId, userId),
+          eq(dailyActivities.activityDate, targetDate)
+        ))
+        .orderBy(desc(dailyActivities.createdAt));
+
+      await cache.set(cacheKey, result, 600); // 10 minute cache
+      return result;
+    } catch (error) {
+      console.error('Error getting daily activities:', error);
+      throw error;
+    }
+  }
+
+  async createDailyActivity(activity: any) {
+    try {
+      const result = await db.insert(dailyActivities).values({
+        ...activity,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      // Clear related caches
+      const cacheKey = cache.generateKey('daily-activities', activity.userId, activity.activityDate);
+      await cache.del(cacheKey);
+      await cache.del(cache.generateKey('streak', activity.userId));
+
+      return result[0];
+    } catch (error) {
+      console.error('Error creating daily activity:', error);
+      throw error;
+    }
+  }
+
+  async updateDailyActivity(id: string, activity: any) {
+    try {
+      const result = await db.update(dailyActivities)
+        .set({ ...activity, updatedAt: new Date() })
+        .where(eq(dailyActivities.id, parseInt(id)))
+        .returning();
+
+      return result[0];
+    } catch (error) {
+      console.error('Error updating daily activity:', error);
+      throw error;
+    }
+  }
+
+  async getAchievements(userId: string) {
+    try {
+      const cacheKey = cache.generateKey('achievements', userId);
+      const cached = await cache.get(cacheKey);
+      if (cached) return cached;
+
+      const result = await db.select().from(achievements)
+        .where(eq(achievements.userId, userId))
+        .orderBy(desc(achievements.unlockedAt));
+
+      await cache.set(cacheKey, result, 3600); // 1 hour cache
+      return result;
+    } catch (error) {
+      console.error('Error getting achievements:', error);
+      throw error;
+    }
+  }
+
+  async createAchievement(achievement: any) {
+    try {
+      const result = await db.insert(achievements).values({
+        ...achievement,
+        unlockedAt: new Date()
+      }).returning();
+
+      // Clear cache
+      const cacheKey = cache.generateKey('achievements', achievement.userId);
+      await cache.del(cacheKey);
+
+      return result[0];
+    } catch (error) {
+      console.error('Error creating achievement:', error);
+      throw error;
+    }
+  }
+
+  async checkAndUnlockAchievements(userId: string) {
+    // This will be implemented with the achievement system logic
+    return [];
   }
 }
 

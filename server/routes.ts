@@ -20,6 +20,7 @@ import { applications, topics, preparationSessions } from '../shared/schema';
 import { spawn } from 'child_process';
 import path from 'path';
 import { requireAuth, getCurrentUserId } from './supabase-auth';
+import gamificationRoutes from './routes/gamification';
 
 const numericIdParam = z.object({
   id: z.preprocess(
