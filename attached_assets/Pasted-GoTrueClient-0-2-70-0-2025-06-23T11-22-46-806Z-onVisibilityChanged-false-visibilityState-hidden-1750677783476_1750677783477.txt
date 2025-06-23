@@ -1,0 +1,34 @@
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:46.806Z #_onVisibilityChanged(false) visibilityState hidden
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:46.806Z #_stopAutoRefresh()
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.279Z #_onVisibilityChanged(false) visibilityState visible
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.279Z #_stopAutoRefresh()
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.279Z #_startAutoRefresh()
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.279Z #_acquireLock begin -1
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.280Z #_autoRefreshTokenTick() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.280Z #_acquireLock begin 0
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.288Z #_acquireLock lock acquired for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.288Z #_recoverAndRefresh() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.289Z #_recoverAndRefresh() session from storage null
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.289Z #_recoverAndRefresh() session is not valid
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.289Z #_recoverAndRefresh() end
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.289Z #_acquireLock lock released for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.289Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.292Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:53.292Z auto refresh token tick lock not available
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:54.849Z #_onVisibilityChanged(false) visibilityState hidden
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:54.849Z #_stopAutoRefresh()
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.963Z #_onVisibilityChanged(false) visibilityState visible
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.963Z #_stopAutoRefresh()
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.963Z #_startAutoRefresh()
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.963Z #_acquireLock begin -1
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.964Z #_autoRefreshTokenTick() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.964Z #_acquireLock begin 0
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.972Z #_acquireLock lock acquired for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.972Z #_recoverAndRefresh() begin
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.972Z #_recoverAndRefresh() session from storage null
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.973Z #_recoverAndRefresh() session is not valid
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.973Z #_recoverAndRefresh() end
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.973Z #_acquireLock lock released for storage key sb-bzukbciiqwdckzmwarku-auth-token
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.973Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.974Z #_acquireLock end
+GoTrueClient@0 (2.70.0) 2025-06-23T11:22:56.974Z auto refresh token tick lock not available
