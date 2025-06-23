@@ -5,8 +5,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider, ToastViewport } from "@/components/ui/toast";
 import { queryClient } from "@/lib/queryClient";
-import { AuthProvider } from "@/hooks/use-auth";
-import { ProtectedRoute } from "@/lib/protected-route";
 
 import Sidebar from "@/components/layout/sidebar";
 import ErrorBoundary from "@/components/error-boundary";
@@ -17,22 +15,13 @@ import Applications from "@/pages/applications";
 import Preparation from "@/pages/preparation";
 import Interviews from "@/pages/interviews";
 import Assessments from "@/pages/assessments";
-import LoginPage from "@/pages/login";
-import RegisterPage from "@/pages/register";
-import AuthPage from "./pages/auth-new";
-import AuthCallback from "./pages/auth-callback";
-import ResetPassword from "./pages/reset-password";
 
 function Router() {
   return (
     <Routes>
-      {/* Standalone authentication routes */}
-      <Route path="/auth" element={<AuthPage />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-      <Route path="/auth/reset-password" element={<ResetPassword />} />
-      <Route path="/login" element={<Navigate to="/auth" />} />
-      <Route path="/register" element={<Navigate to="/auth" />} />
-
+      {/* Redirect root to dashboard */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      
       {/* Main app routes with sidebar */}
       <Route
         path="/*"
@@ -44,53 +33,43 @@ function Router() {
             <div className="flex-1 flex flex-col overflow-hidden">
               <Routes>
                 <Route
-                  path="/"
+                  path="/dashboard"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <Dashboard />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <Dashboard />
+                    </ErrorBoundary>
                   }
                 />
                 <Route
                   path="/applications"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <Applications />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <Applications />
+                    </ErrorBoundary>
                   }
                 />
                 <Route
                   path="/preparation"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <Preparation />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <Preparation />
+                    </ErrorBoundary>
                   }
                 />
                 <Route
                   path="/interviews"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <Interviews />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <Interviews />
+                    </ErrorBoundary>
                   }
                 />
                 <Route
                   path="/assessments"
                   element={
-                    <ProtectedRoute>
-                      <ErrorBoundary>
-                        <Assessments />
-                      </ErrorBoundary>
-                    </ProtectedRoute>
+                    <ErrorBoundary>
+                      <Assessments />
+                    </ErrorBoundary>
                   }
                 />
                 <Route path="*" element={<NotFound />} />
@@ -106,14 +85,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <ToastProvider>
-            <Router />
-            <ToastViewport />
-          </ToastProvider>
-        </TooltipProvider>
-      </AuthProvider>
+      <TooltipProvider>
+        <ToastProvider>
+          <Router />
+          <ToastViewport />
+        </ToastProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
