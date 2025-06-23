@@ -215,7 +215,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(result);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch applications" });
+      console.error("Database connection error:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch applications", 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
     }
   });
 

@@ -16,7 +16,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 const projectRef = SUPABASE_URL.replace('https://', '').replace('.supabase.co', '');
 
 // Construct PostgreSQL connection string for Supabase
-const SUPABASE_DB_URL = `postgresql://postgres:${SUPABASE_SERVICE_KEY}@db.${projectRef}.supabase.co:5432/postgres`;
+// Use direct database connection with your database password
+const SUPABASE_DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;
+const SUPABASE_DB_URL = `postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${projectRef}.supabase.co:5432/postgres`;
 
 console.log("Supabase database configuration:", {
   projectRef,
