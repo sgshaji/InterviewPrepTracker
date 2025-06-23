@@ -15,6 +15,7 @@ import { validateDatabaseInput, asyncHandler, requestLogger } from "./middleware
 import compression from "compression";
 import { eq, and, inArray, sql, desc, count, or } from "drizzle-orm";
 import { db } from "./db";
+import { fetchUserApplications, fetchUserInterviews, fetchUserPreparationSessions, testSupabaseAPI } from "./supabase-api";
 import { applications, topics, preparationSessions } from '../shared/schema';
 import { spawn } from 'child_process';
 import path from 'path';
