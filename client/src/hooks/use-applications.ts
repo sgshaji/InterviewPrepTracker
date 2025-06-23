@@ -145,18 +145,18 @@ export function useApplications(): UseApplicationsReturn {
         variant: 'destructive',
       })
     }
-  }, [user])
+  }, [])
 
   const updateApplication = useCallback(async (id: string, data: Partial<Omit<Application, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
     const prevApplications = [...applications]
     
-    const originalApp = applications.find(app => app.id === id)
+    const originalApp = applications.find(app => app.id.toString() === id)
     if (!originalApp) return
 
-    const updatedAppOptimistic = { ...originalApp, ...data, updatedAt: new Date() }
+    const updatedAppOptimistic = { ...originalApp, ...data, updatedAt: new Date().toISOString() }
 
     setApplications(prev => 
-      prev.map(app => (app.id === id ? updatedAppOptimistic : app))
+      prev.map(app => (app.id.toString() === id ? updatedAppOptimistic : app))
     )
 
     try {
@@ -166,7 +166,7 @@ export function useApplications(): UseApplicationsReturn {
       const updatedApplication = applicationSchema.parse(await api.put(`/applications/${id}`, validationResult))
 
       setApplications(prev => 
-        prev.map(app => (app.id === id ? updatedApplication : app))
+        prev.map(app => (app.id.toString() === id ? updatedApplication : app))
       )
 
       toast({
@@ -188,7 +188,7 @@ export function useApplications(): UseApplicationsReturn {
   const deleteApplication = useCallback(async (id: string) => {
     const originalApplications = [...applications]
     
-    setApplications(prev => prev.filter(app => app.id !== id))
+    setApplications(prev => prev.filter(app => app.id.toString() !== id))
 
     try {
       await api.delete(`/applications/${id}`)
