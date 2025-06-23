@@ -139,10 +139,14 @@ export default function AuthPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    console.log('Google sign-in button clicked');
     setError('');
     try {
+      console.log('Calling signInWithGoogle...');
       await signInWithGoogle();
+      console.log('signInWithGoogle completed');
     } catch (error: any) {
+      console.error('Google sign-in error:', error);
       setError(error.message || 'Failed to sign in with Google');
     }
   };
