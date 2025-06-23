@@ -224,7 +224,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apps = await response.json();
       console.log(`Retrieved ${apps.length} applications for user ${userId}`);
 
-      const result = { totalCount: apps.length, applications: apps };
+      // Transform snake_case to camelCase to match frontend schema
+      const transformedApps = apps.map((app: any) => ({
+        id: app.id,
+        userId: app.user_id,
+        dateApplied: app.date_applied,
+        companyName: app.company_name,
+        roleTitle: app.role_title,
+        roleUrl: app.role_url,
+        jobStatus: app.job_status,
+        applicationStage: app.application_stage,
+        resumeVersion: app.resume_version,
+        modeOfApplication: app.mode_of_application,
+        followUpDate: app.follow_up_date,
+        createdAt: app.created_at,
+        updatedAt: app.updated_at
+      }));
+
+      const result = { totalCount: transformedApps.length, applications: transformedApps };
       
       // Cache the result for 5 minutes (300 seconds)
       await cache.set(cacheKey, result, 300);
