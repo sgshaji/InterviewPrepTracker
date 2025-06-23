@@ -111,18 +111,31 @@ const getUserFromAuthUser = (authUser: any): Express.User => {
 // Middleware to authenticate requests using Supabase JWT
 export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
-    console.log('Auth middleware - checking request headers');
-    console.log('Available headers:', Object.keys(req.headers));
-    console.log('Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    console.log('Auth middleware - checking authentication');
+    console.log('Query parameters:', Object.keys(req.query));
+    console.log('Auth token in query:', req.query.auth_token ? 'Present' : 'Missing');
     
-    // Get the JWT from the Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('Auth middleware - no valid authorization header found');
+    // Try query parameter first (to bypass header filtering), then fallback to headers
+    let token = req.query.auth_token as string;
+    
+    if (!token) {
+      // Fallback to X-Auth-Token header
+      token = req.headers['x-auth-token'] as string;
+    }
+    
+    if (!token) {
+      // Fallback to Authorization header
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
+
+    if (!token) {
+      console.log('Auth middleware - no valid token found');
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const token = authHeader.split(' ')[1];
     console.log('Auth middleware - token found, length:', token.length);
 
     // Verify the JWT and get the auth user

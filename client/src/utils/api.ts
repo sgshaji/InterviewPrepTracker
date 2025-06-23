@@ -10,7 +10,8 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   
   if (session?.access_token) {
     console.log('Adding auth token to request headers');
-    baseHeaders['Authorization'] = `Bearer ${session.access_token}`;
+    // Use X-Auth-Token instead of Authorization to bypass proxy filtering
+    baseHeaders['X-Auth-Token'] = session.access_token;
     console.log('Token preview:', session.access_token.substring(0, 20) + '...');
   } else {
     console.warn('No access token found in session');
@@ -20,17 +21,34 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return baseHeaders;
 }
 
+async function getAuthToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || null;
+}
+
 export const api = {
   async get<T>(endpoint: string): Promise<T> {
-    const headers = await getAuthHeaders();
-    console.log('Making API request to:', `${API_BASE_URL}${endpoint}`);
-    console.log('Request headers:', Object.keys(headers));
-    console.log('Has Authorization header:', 'Authorization' in headers);
+    const token = await getAuthToken();
+    let url = `${API_BASE_URL}${endpoint}`;
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Add token as query parameter to bypass header filtering
+    if (token) {
+      const separator = endpoint.includes('?') ? '&' : '?';
+      url += `${separator}auth_token=${encodeURIComponent(token)}`;
+      console.log('Adding auth token as query parameter');
+    } else {
+      console.warn('No auth token available');
+    }
+    
+    console.log('Making API request to:', url.replace(/auth_token=[^&]+/, 'auth_token=***'));
+    
+    const response = await fetch(url, {
       method: 'GET',
-      headers,
-      credentials: 'include'
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      mode: 'cors'
     });
     
     if (!response.ok) {
