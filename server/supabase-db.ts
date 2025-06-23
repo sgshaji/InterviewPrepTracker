@@ -15,9 +15,9 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 // Extract project reference from Supabase URL
 const projectRef = SUPABASE_URL.replace('https://', '').replace('.supabase.co', '');
 
-// Use service role key to connect directly to Supabase database
-const SUPABASE_SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-const SUPABASE_DB_URL = `postgresql://postgres.${projectRef}:${SUPABASE_SERVICE_ROLE_KEY}@aws-0-us-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true`;
+// Use standard PostgreSQL connection format for Supabase
+const SUPABASE_DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD;
+const SUPABASE_DB_URL = `postgresql://postgres:${SUPABASE_DB_PASSWORD}@aws-0-us-west-1.pooler.supabase.com:6543/postgres?sslmode=require`;
 
 console.log("Supabase database configuration:", {
   projectRef,
