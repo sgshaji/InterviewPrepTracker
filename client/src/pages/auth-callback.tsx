@@ -12,7 +12,10 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('🔄 Processing auth callback...');
+        console.log('Processing auth callback...');
+        console.log('Current URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        console.log('Search:', window.location.search);
         
         // First, check URL for error parameters from OAuth provider
         const urlParams = new URLSearchParams(window.location.search);
@@ -37,27 +40,50 @@ export default function AuthCallback() {
           return;
         }
 
-        // Handle Supabase auth callback
+        // Get the URL hash which contains auth tokens from Supabase
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        console.log('URL hash params:', Object.fromEntries(hashParams));
+        
+        // Handle Supabase auth callback with URL hash
         const { data, error: supabaseError } = await supabase.auth.getSession();
+        console.log('Current session data:', data);
         
         if (supabaseError) {
-          console.error('💥 Supabase auth callback error:', supabaseError);
+          console.error('Supabase auth callback error:', supabaseError);
           setStatus('error');
           setMessage(supabaseError.message || 'Authentication failed');
           setTimeout(() => navigate('/auth'), 3000);
           return;
         }
 
-        if (data.session) {
-          console.log('✅ Authentication successful, session found');
+        // If no current session, try to get session from URL
+        if (!data.session) {
+          console.log('No current session, checking URL for auth tokens...');
+          const { data: authData, error: authError } = await supabase.auth.getUser();
+          console.log('Auth data from URL:', authData, 'Error:', authError);
+          
+          if (authError) {
+            console.error('Failed to get user from URL:', authError);
+            setStatus('error');
+            setMessage('Failed to complete authentication');
+            setTimeout(() => navigate('/auth'), 3000);
+            return;
+          }
+        }
+
+        // Check session again after processing URL
+        const { data: finalData } = await supabase.auth.getSession();
+        
+        if (finalData.session) {
+          console.log('Authentication successful, session found');
           setStatus('success');
           setMessage('Authentication successful! Redirecting to dashboard...');
           setTimeout(() => navigate('/dashboard'), 2000);
         } else {
-          console.log('📧 No session found, likely email confirmation');
-          setStatus('success');
-          setMessage('Email confirmed! Please sign in to continue.');
-          setTimeout(() => navigate('/auth'), 2000);
+          console.log('No session found after callback processing');
+          setStatus('error');
+          setMessage('Authentication completed but no session created. Please try signing in again.');
+          setTimeout(() => navigate('/auth'), 3000);
         }
       } catch (error: any) {
         console.error('💥 Unexpected auth callback error:', error);
