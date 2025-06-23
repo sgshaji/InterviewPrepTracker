@@ -924,10 +924,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // STREAKS & GAMIFICATION API ROUTES
+  // Mount gamification routes
+  app.use('/api', gamificationRoutes);
+
+  // LEGACY STREAKS & GAMIFICATION API ROUTES (for backward compatibility)
   app.get("/api/streaks", async (req: Request, res: Response) => {
     try {
-      const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
+      const userId = req.headers['x-user-id'] as string || 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
       
       const streak = await db.query.streaks.findFirst({
         where: eq(streaks.userId, userId)
