@@ -112,9 +112,16 @@ export const streaks = pgTable("streaks", {
 export const dailyGoals = pgTable("daily_goals", {
   id: serial("id").primaryKey(),
   userId: uuid("user_id").notNull().references(() => authUsers.id, { onDelete: 'cascade' }),
-  goalType: text("goal_type").notNull(), // 'applications', 'behavioral_prep', 'technical_prep', 'system_design', 'coding_practice'
+  goalType: text("goal_type").notNull(), // 'applications', 'behavioral_prep', 'technical_prep', 'system_design', 'coding_practice', 'networking', 'skill_building'
   targetCount: integer("target_count").notNull().default(1),
   isActive: boolean("is_active").notNull().default(true),
+  difficulty: text("difficulty").notNull().default('medium'), // 'easy', 'medium', 'hard'
+  frequency: text("frequency").notNull().default('daily'), // 'daily', 'weekly', 'monthly'
+  category: text("category").notNull().default('job_search'), // 'job_search', 'skills', 'networking', 'preparation'
+  description: text("description"),
+  reminderTime: text("reminder_time"), // HH:mm format
+  weekdaysOnly: boolean("weekdays_only").notNull().default(false),
+  streakFreeze: integer("streak_freeze").notNull().default(0), // Number of allowed missed days
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -129,6 +136,14 @@ export const dailyActivities = pgTable("daily_activities", {
   targetCount: integer("target_count").notNull(),
   isCompleted: boolean("is_completed").notNull().default(false),
   pointsEarned: integer("points_earned").notNull().default(0),
+  notes: text("notes"),
+  timeSpent: integer("time_spent"), // minutes
+  qualityScore: integer("quality_score").default(5), // 1-10 scale
+  moodBefore: integer("mood_before"), // 1-10 scale
+  moodAfter: integer("mood_after"), // 1-10 scale
+  tags: text("tags").array(),
+  linkedApplicationId: uuid("linked_application_id").references(() => applications.id),
+  linkedInterviewId: uuid("linked_interview_id").references(() => interviews.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -141,6 +156,13 @@ export const achievements = pgTable("achievements", {
   title: text("title").notNull(),
   description: text("description"),
   pointsAwarded: integer("points_awarded").notNull().default(0),
+  iconName: text("icon_name").notNull().default('trophy'),
+  rarity: text("rarity").notNull().default('common'), // 'common', 'rare', 'epic', 'legendary'
+  category: text("category").notNull().default('general'), // 'streak', 'application', 'interview', 'preparation', 'milestone'
+  isVisible: boolean("is_visible").notNull().default(true),
+  prerequisiteAchievements: text("prerequisite_achievements").array(),
+  progressCurrent: integer("progress_current").notNull().default(0),
+  progressTarget: integer("progress_target").notNull().default(1),
   unlockedAt: timestamp("unlocked_at").defaultNow().notNull(),
 });
 
