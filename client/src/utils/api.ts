@@ -1,7 +1,7 @@
 const API_BASE_URL = '/api';
 
 // Static authentication for sgshaji@gmail.com - using real Supabase user ID
-const STATIC_USER_ID = 'b4d3aeaa-4e73-44f7-bf6a-2f48d3e0f8fc';
+const STATIC_USER_ID = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
 
 export const api = {
   async get<T>(endpoint: string): Promise<T> {

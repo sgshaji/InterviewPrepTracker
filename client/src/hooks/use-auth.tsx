@@ -22,9 +22,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Static user for sgshaji@gmail.com
+// Static user for sgshaji@gmail.com - using real Supabase user ID
 const STATIC_USER: AuthUser = {
-  id: '550e8400-e29b-41d4-a716-446655440000',
+  id: 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c',
   email: 'sgshaji@gmail.com',
   fullName: 'S G Shaji',
   emailConfirmed: true,

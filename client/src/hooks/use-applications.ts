@@ -115,7 +115,7 @@ export function useApplications(): UseApplicationsReturn {
     const tempApplication: Application = {
       ...newApplicationData,
       id: tempId,
-      userId: '550e8400-e29b-41d4-a716-446655440000',
+      userId: 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
