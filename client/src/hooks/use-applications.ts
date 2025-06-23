@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from './use-toast'
 import { Application, applicationSchema, insertApplicationSchema } from '@shared/schema'
 import { useAuth } from './use-auth'
-import { authorizedFetch } from '@/api/authorizedFetch'
+import { api } from '@/utils/api'
 
 export { type Application }
 
@@ -63,13 +63,7 @@ export function useApplications(): UseApplicationsReturn {
         ...(filters.interviewing && { interviewing: 'true' })
       })
 
-      const response = await authorizedFetch(`/api/applications?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch applications: ${response.statusText}`)
-      }
-
-      const data = await response.json()
+      const data = await api.get(`/applications?${queryParams.toString()}`) as { applications: any[], totalCount: number, hasMore: boolean }
       
       const parsedApps = applicationSchema.array().parse(data.applications)
 
@@ -139,18 +133,7 @@ export function useApplications(): UseApplicationsReturn {
 
       const parsedData = insertApplicationSchema.parse(newApplicationData)
 
-      const response = await authorizedFetch('/api/applications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsedData),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to create application')
-      }
-
-      const savedApplication = applicationSchema.parse(await response.json())
+      const savedApplication = applicationSchema.parse(await api.post('/applications', parsedData))
       
       setApplications(prev => 
         prev.map(app => (app.id === tempId ? savedApplication : app))
@@ -188,18 +171,7 @@ export function useApplications(): UseApplicationsReturn {
       const partialSchema = insertApplicationSchema.partial()
       const validationResult = partialSchema.parse(data)
 
-      const response = await authorizedFetch(`/api/applications/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(validationResult),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to update application')
-      }
-
-      const updatedApplication = applicationSchema.parse(await response.json())
+      const updatedApplication = applicationSchema.parse(await api.put(`/applications/${id}`, validationResult))
 
       setApplications(prev => 
         prev.map(app => (app.id === id ? updatedApplication : app))
@@ -227,14 +199,7 @@ export function useApplications(): UseApplicationsReturn {
     setApplications(prev => prev.filter(app => app.id !== id))
 
     try {
-      const response = await authorizedFetch(`/api/applications/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to delete application')
-      }
+      await api.delete(`/applications/${id}`)
 
       toast({
         title: 'Success',
