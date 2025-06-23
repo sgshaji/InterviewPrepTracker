@@ -196,20 +196,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const whereClause = and(...whereConditions);
 
-      const [totalCountResult] = await db
-        .select({ count: count() })
-        .from(applications)
-        .where(whereClause);
+      // Fetch real data from Supabase using REST API
+      const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+      const SUPABASE_SERVICE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+        throw new Error("Supabase configuration missing");
+      }
 
-      const apps = await db
-        .select()
-        .from(applications)
-        .where(whereClause)
-        .orderBy(desc(applications.createdAt))
-        .limit(limit)
-        .offset(page * limit);
+      let query = `user_id=eq.${userId}&select=*&order=created_at.desc`;
+      if (limit && limit < 10000) {
+        query += `&limit=${limit}&offset=${page * limit}`;
+      }
 
-      const result = { totalCount: totalCountResult.count, applications: apps };
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/applications?${query}`, {
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Supabase API error: ${response.status} ${response.statusText}`);
+      }
+
+      const apps = await response.json();
+      console.log(`Retrieved ${apps.length} applications for user ${userId}`);
+
+      const result = { totalCount: apps.length, applications: apps };
       
       // Cache the result for 5 minutes (300 seconds)
       await cache.set(cacheKey, result, 300);
