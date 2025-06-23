@@ -66,8 +66,7 @@ export const api = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Token': token,
-        'X-Custom-Auth': token
+        'X-Request-ID': token
       },
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include',
@@ -90,8 +89,7 @@ export const api = {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Token': token,
-        'X-Custom-Auth': token
+        'X-Request-ID': token
       },
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include',
@@ -114,8 +112,7 @@ export const api = {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'X-User-Token': token,
-        'X-Custom-Auth': token
+        'X-Request-ID': token
       },
       credentials: 'include',
       mode: 'cors'
