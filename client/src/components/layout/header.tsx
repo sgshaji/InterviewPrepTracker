@@ -1,5 +1,6 @@
 import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserNav } from "@/components/user-nav";
 
 interface HeaderProps {
   title: string;
@@ -23,6 +24,7 @@ export default function Header({ title, subtitle, action }: HeaderProps) {
           <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-700">
             <Settings className="h-4 w-4" />
           </Button>
+          <UserNav />
         </div>
       </div>
     </header>

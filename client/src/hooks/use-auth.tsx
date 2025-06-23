@@ -163,17 +163,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      console.log('Signing out user...');
       const result = await authService.signOut();
       
       if (result.error) {
         throw new Error(result.error);
       }
 
+      // Clear user state immediately
+      setUser(null);
+
       toast({
         title: "Signed out",
         description: "You have been successfully signed out.",
       });
+
+      // Redirect to login page
+      window.location.href = '/auth';
     } catch (error: any) {
+      console.error('Sign out error:', error);
       toast({
         title: "Sign out failed",
         description: error.message,
