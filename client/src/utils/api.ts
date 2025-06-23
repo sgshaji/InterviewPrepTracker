@@ -1,48 +1,15 @@
-import { supabase } from "@/lib/supabase";
-
 const API_BASE_URL = 'http://localhost:5000/api';
 
-// Remove unused function - authentication now uses query parameters
-
-async function getAuthToken(): Promise<string | null> {
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('Error getting session:', error);
-      return null;
-    }
-    
-    if (!session?.access_token) {
-      console.warn('No access token in session');
-      return null;
-    }
-    
-    console.log('Retrieved token, length:', session.access_token.length);
-    return session.access_token;
-  } catch (error) {
-    console.error('Error in getAuthToken:', error);
-    return null;
-  }
-}
+// Static authentication for sgshaji@gmail.com
+const STATIC_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
 
 export const api = {
   async get<T>(endpoint: string): Promise<T> {
-    const token = await getAuthToken();
-    
-    if (!token) {
-      console.warn('No auth token available');
-      throw new Error('No authentication token available');
-    }
-    
-    console.log('Retrieved token, length:', token.length, 'starts with:', token.substring(0, 20) + '...');
-    
-    // Use completely innocent header name to bypass filtering
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'X-Request-ID': token
+        'X-User-ID': STATIC_USER_ID
       },
       credentials: 'include',
       mode: 'cors'
@@ -56,17 +23,11 @@ export const api = {
   },
 
   async post<T>(endpoint: string, data?: any): Promise<T> {
-    const token = await getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Request-ID': token
+        'X-User-ID': STATIC_USER_ID
       },
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include',
@@ -79,17 +40,11 @@ export const api = {
   },
 
   async put<T>(endpoint: string, data?: any): Promise<T> {
-    const token = await getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'X-Request-ID': token
+        'X-User-ID': STATIC_USER_ID
       },
       body: data ? JSON.stringify(data) : undefined,
       credentials: 'include',
@@ -102,17 +57,11 @@ export const api = {
   },
 
   async delete<T>(endpoint: string): Promise<T> {
-    const token = await getAuthToken();
-    
-    if (!token) {
-      throw new Error('No authentication token available');
-    }
-    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        'X-Request-ID': token
+        'X-User-ID': STATIC_USER_ID
       },
       credentials: 'include',
       mode: 'cors'
@@ -122,4 +71,4 @@ export const api = {
     }
     return response.json();
   }
-}; 
+};

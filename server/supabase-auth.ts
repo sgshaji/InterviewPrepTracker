@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import type { NextFunction, Request, Response } from 'express';
 
 // Extend Express types
@@ -60,17 +59,20 @@ type ExpressRequest = Request & {
   };
 };
 
-// Initialize Supabase admin client for server-side operations
-const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+// Static user for sgshaji@gmail.com
+const STATIC_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+const STATIC_USER: Express.User = {
+  id: STATIC_USER_ID,
+  email: 'sgshaji@gmail.com',
+  username: 'sgshaji',
+  fullName: 'S G Shaji',
+  avatar: null,
+  role: 'user',
+  subscriptionStatus: 'active',
+  email_confirmed_at: new Date(),
+  created_at: new Date(),
+  updated_at: new Date()
+};
 
 export function setupSupabaseAuth(app: any) {
   // Auth callback handler (for OAuth redirects)
@@ -80,97 +82,31 @@ export function setupSupabaseAuth(app: any) {
   });
 }
 
-// Helper function to extract user metadata from auth user
-const getUserFromAuthUser = (authUser: any): Express.User => {
-  const username = authUser.user_metadata?.preferred_username || 
-                   authUser.user_metadata?.username ||
-                   authUser.email?.split('@')[0] || 
-                   'user';
-  
-  const fullName = authUser.user_metadata?.full_name || 
-                   authUser.user_metadata?.name || 
-                   authUser.email?.split('@')[0] || 
-                   'New User';
-  
-  const subscriptionStatus = authUser.email === 'sgshaji@gmail.com' ? 'active' : 'inactive';
-  
-  return {
-    id: authUser.id,
-    email: authUser.email,
-    username,
-    fullName,
-    avatar: authUser.user_metadata?.avatar_url || null,
-    role: 'user',
-    subscriptionStatus,
-    email_confirmed_at: authUser.email_confirmed_at ? new Date(authUser.email_confirmed_at) : null,
-    created_at: authUser.created_at ? new Date(authUser.created_at) : new Date(),
-    updated_at: authUser.updated_at ? new Date(authUser.updated_at) : new Date()
-  };
-};
-
-// Middleware to authenticate requests using Supabase JWT
+// Simplified authentication middleware for static user
 export const requireAuth = async (req: ExpressRequest, res: Response, next: NextFunction) => {
   try {
-    // Authentication via multiple methods (bypasses header filtering in Replit environment)
+    // Check for X-User-ID header
+    const userId = req.headers['x-user-id'] as string;
     
-    let token = req.query.auth_token as string;
-    
-    // Check request body for POST requests with X-HTTP-Method-Override
-    if (!token && req.body && req.body.auth_token) {
-      token = req.body.auth_token;
-      console.log('Auth middleware - token found in request body');
-    }
-    
-    // Check innocent header name that bypasses Replit filtering
-    if (!token) {
-      token = req.headers['x-request-id'] as string;
-      if (token) console.log('Auth middleware - token found in X-Request-ID header');
-    }
-    
-    if (!token) {
-      // Fallback to X-Auth-Token header
-      token = req.headers['x-auth-token'] as string;
-    }
-    
-    if (!token) {
-      // Fallback to Authorization header
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.split(' ')[1];
-      }
+    if (!userId) {
+      console.log('Auth middleware - no X-User-ID header found');
+      return res.status(401).json({ error: 'No user ID provided' });
     }
 
-    if (!token) {
-      console.log('Auth middleware - no valid token found');
-      return res.status(401).json({ error: 'No token provided' });
+    // Verify it matches our static user
+    if (userId !== STATIC_USER_ID) {
+      console.log('Auth middleware - invalid user ID:', userId);
+      return res.status(401).json({ error: 'Invalid user ID' });
     }
 
-    console.log('Auth middleware - token found, length:', token.length, 'starts with:', token.substring(0, 10));
+    console.log('Auth middleware - authenticated static user:', STATIC_USER.email);
 
-    // Verify the JWT and get the auth user
-    const { data: { user: authUser }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error) {
-      console.error('Auth middleware - token verification failed:', error.message);
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    if (!authUser) {
-      console.log('Auth middleware - no user found in token');
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-
-    console.log('Auth middleware - user authenticated:', authUser.email);
-
-    // Convert auth user to Express user format
-    const user = getUserFromAuthUser(authUser);
-    
     // Set user on request for subsequent middleware
-    req.user = user;
+    req.user = STATIC_USER;
     req.auth = {
-      userId: authUser.id,
-      email: authUser.email,
-      provider: authUser.app_metadata?.provider || 'email'
+      userId: STATIC_USER_ID,
+      email: STATIC_USER.email,
+      provider: 'static'
     };
 
     next();
