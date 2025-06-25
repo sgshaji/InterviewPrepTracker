@@ -11,7 +11,9 @@
     "db:push": "drizzle-kit push",
     "generate-test-data": "tsx scripts/generate-test-data.ts",
     "measure-performance": "node scripts/measure-performance.mjs",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "setup": "node setup-local.js",
+    "daily-reminders": "tsx server/cron-daily-goals.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

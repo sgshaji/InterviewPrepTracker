@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { storage, streaks, dailyGoals, dailyActivities, achievements } from "./storage";
+import { storage } from "./storage";
 import { cache } from "./cache";
 import { 
   insertApplicationSchema, 
@@ -8,7 +8,14 @@ import {
   insertInterviewSchema, 
   insertAssessmentSchema,
   insertReminderSchema,
-  insertTopicSchema 
+  insertTopicSchema,
+  applications, 
+  topics, 
+  preparationSessions,
+  streaks,
+  dailyGoals,
+  dailyActivities,
+  achievements
 } from "../shared/schema";
 import { z } from "zod";
 import { validateDatabaseInput, asyncHandler, requestLogger } from "./middleware";
@@ -16,7 +23,6 @@ import compression from "compression";
 import { eq, and, inArray, sql, desc, count, or } from "drizzle-orm";
 import { db } from "./db";
 import { fetchUserApplications, fetchUserInterviews, fetchUserPreparationSessions, testSupabaseAPI } from "./supabase-api";
-import { applications, topics, preparationSessions } from '../shared/schema';
 import { spawn } from 'child_process';
 import path from 'path';
 import { requireAuth, getCurrentUserId } from './supabase-auth';
@@ -961,8 +967,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const goals = await db.query.dailyGoals.findMany({
         where: and(
-          eq(storage.dailyGoals.userId, userId),
-          eq(storage.dailyGoals.isActive, true)
+          eq(dailyGoals.userId, userId),
+          eq(dailyGoals.isActive, true)
         )
       });
 
@@ -978,7 +984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
       const { goalType, targetCount } = req.body;
 
-      const newGoal = await db.insert(storage.dailyGoals).values({
+      const newGoal = await db.insert(dailyGoals).values({
         userId,
         goalType,
         targetCount,
@@ -999,8 +1005,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const activities = await db.query.dailyActivities.findMany({
         where: and(
-          eq(storage.dailyActivities.userId, userId),
-          eq(storage.dailyActivities.activityDate, date as string)
+          eq(dailyActivities.userId, userId),
+          eq(dailyActivities.activityDate, date as string)
         )
       });
 
@@ -1019,9 +1025,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the goal to determine target count
       const goal = await db.query.dailyGoals.findFirst({
         where: and(
-          eq(storage.dailyGoals.userId, userId),
-          eq(storage.dailyGoals.goalType, goalType),
-          eq(storage.dailyGoals.isActive, true)
+          eq(dailyGoals.userId, userId),
+          eq(dailyGoals.goalType, goalType),
+          eq(dailyGoals.isActive, true)
         )
       });
 
@@ -1032,9 +1038,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if activity already exists for today
       const existingActivity = await db.query.dailyActivities.findFirst({
         where: and(
-          eq(storage.dailyActivities.userId, userId),
-          eq(storage.dailyActivities.activityDate, activityDate),
-          eq(storage.dailyActivities.goalType, goalType)
+          eq(dailyActivities.userId, userId),
+          eq(dailyActivities.activityDate, activityDate),
+          eq(dailyActivities.goalType, goalType)
         )
       });
 
@@ -1053,13 +1059,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsEarned = isCompleted && !existingActivity.isCompleted ? 
           pointsMap[goalType as keyof typeof pointsMap] : 0;
 
-        const updated = await db.update(storage.dailyActivities)
+        const updated = await db.update(dailyActivities)
           .set({
             completedCount: newCompleted,
             isCompleted,
             pointsEarned: existingActivity.pointsEarned + pointsEarned
           })
-          .where(eq(storage.dailyActivities.id, existingActivity.id))
+          .where(eq(dailyActivities.id, existingActivity.id))
           .returning();
 
         // Update streak and points if goal completed
@@ -1073,7 +1079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isCompleted = completedCount >= goal.targetCount;
         const pointsEarned = isCompleted ? pointsMap[goalType as keyof typeof pointsMap] : 0;
 
-        const newActivity = await db.insert(storage.dailyActivities).values({
+        const newActivity = await db.insert(dailyActivities).values({
           userId,
           activityDate,
           goalType,
@@ -1100,12 +1106,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = 'b4d3aeaa-4e73-44f7-bf6a-2148d3e0f81c';
       
-      const achievements = await db.query.achievements.findMany({
-        where: eq(storage.achievements.userId, userId),
-        orderBy: desc(storage.achievements.unlockedAt)
+      const userAchievements = await db.query.achievements.findMany({
+        where: eq(achievements.userId, userId),
+        orderBy: desc(achievements.unlockedAt)
       });
 
-      res.json(achievements);
+      res.json(userAchievements);
     } catch (error) {
       console.error('Error fetching achievements:', error);
       res.status(500).json({ error: 'Failed to fetch achievements' });
@@ -1117,7 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const today = new Date().toISOString().split('T')[0];
     
     const streak = await db.query.streaks.findFirst({
-      where: eq(storage.streaks.userId, userId)
+      where: eq(streaks.userId, userId)
     });
 
     if (streak) {
@@ -1138,7 +1144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newLongestStreak = Math.max(streak.longestStreak, newCurrentStreak);
       const newLevel = Math.floor((streak.totalPoints + pointsEarned) / 100) + 1;
 
-      await db.update(storage.streaks)
+      await db.update(streaks)
         .set({
           currentStreak: newCurrentStreak,
           longestStreak: newLongestStreak,
@@ -1146,7 +1152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPoints: streak.totalPoints + pointsEarned,
           level: newLevel
         })
-        .where(eq(storage.streaks.id, streak.id));
+        .where(eq(streaks.id, streak.id));
 
       // Check for achievements
       await checkAchievements(userId, newCurrentStreak, newLevel, streak.totalPoints + pointsEarned);
@@ -1194,8 +1200,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (level > 1) {
       const existingLevelAchievement = await db.query.achievements.findFirst({
         where: and(
-          eq(storage.achievements.userId, userId),
-          eq(storage.achievements.achievementType, `level_${level}`)
+          eq(achievements.userId, userId),
+          eq(achievements.achievementType, `level_${level}`)
         )
       });
 
@@ -1204,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId,
           achievementType: `level_${level}`,
           title: `Level ${level} Achieved!`,
-          description: `You've reached level ${level}`,
+          description: `Reached level ${level}`,
           pointsAwarded: level * 50
         });
       }
@@ -1212,7 +1218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Award achievements
     for (const achievement of achievementsToAward) {
-      await db.insert(storage.achievements).values(achievement);
+      await db.insert(achievements).values(achievement);
     }
   }
 

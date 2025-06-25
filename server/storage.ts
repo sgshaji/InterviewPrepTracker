@@ -158,7 +158,11 @@ export class DatabaseStorage implements IStorage {
       
       return {
         totalCount,
-        applications: userApplications
+        applications: userApplications.map(app => ({
+          ...app,
+          createdAt: app.createdAt.toISOString(),
+          updatedAt: app.updatedAt.toISOString()
+        }))
       };
     } catch (error) {
       console.error('Error fetching applications:', error);
@@ -170,27 +174,33 @@ export class DatabaseStorage implements IStorage {
     const [application] = await db
       .select()
       .from(applications)
-      .where(eq(applications.id, id))
+      .where(eq(applications.id, parseInt(id)))
       .limit(1);
-    return application;
+    
+    if (!application) return undefined;
+    
+    return {
+      ...application,
+      createdAt: application.createdAt.toISOString(),
+      updatedAt: application.updatedAt.toISOString()
+    };
   }
 
   async createApplication(application: InsertApplication): Promise<Application> {
     try {
-      const applicationWithId = {
-        ...application,
-        id: randomUUID()
-      };
-      
       const [newApplication] = await db
         .insert(applications)
-        .values(applicationWithId)
+        .values(application)
         .returning();
       
       // Invalidate cache for this user's applications
       await cache.invalidatePattern(`applications:${application.userId}:*`);
       
-      return newApplication;
+      return {
+        ...newApplication,
+        createdAt: newApplication.createdAt.toISOString(),
+        updatedAt: newApplication.updatedAt.toISOString()
+      };
     } catch (error) {
       console.error('Error in createApplication:', error);
       throw new Error('Failed to create application');
@@ -200,18 +210,19 @@ export class DatabaseStorage implements IStorage {
   async updateApplication(id: string, application: Partial<InsertApplication>): Promise<Application> {
     const [updatedApplication] = await db
       .update(applications)
-      .set({ ...application, updatedAt: new Date() })
-      .where(eq(applications.id, id))
+      .set(application)
+      .where(eq(applications.id, parseInt(id)))
       .returning();
     
-    // Invalidate cache for this user's applications
-    await cache.invalidatePattern(`applications:${updatedApplication.userId}:*`);
-    
-    return updatedApplication;
+    return {
+      ...updatedApplication,
+      createdAt: updatedApplication.createdAt.toISOString(),
+      updatedAt: updatedApplication.updatedAt.toISOString()
+    };
   }
 
   async deleteApplication(id: string): Promise<void> {
-    await db.delete(applications).where(eq(applications.id, id));
+    await db.delete(applications).where(eq(applications.id, parseInt(id)));
   }
 
   // Preparation Sessions
@@ -234,19 +245,15 @@ export class DatabaseStorage implements IStorage {
           lte(preparationSessions.date, endDate)
         )
       )
-      .orderBy(asc(preparationSessions.date));
+      .orderBy(desc(preparationSessions.date));
   }
 
   async createPreparationSession(session: InsertPreparationSession): Promise<PreparationSession> {
-    const sessionWithId = {
-      ...session,
-      id: randomUUID()
-    };
-    
     const [newSession] = await db
       .insert(preparationSessions)
-      .values(sessionWithId)
+      .values(session)
       .returning();
+    
     return newSession;
   }
 
@@ -254,13 +261,14 @@ export class DatabaseStorage implements IStorage {
     const [updatedSession] = await db
       .update(preparationSessions)
       .set(session)
-      .where(eq(preparationSessions.id, id))
+      .where(eq(preparationSessions.id, parseInt(id)))
       .returning();
+    
     return updatedSession;
   }
 
   async deletePreparationSession(id: string): Promise<void> {
-    await db.delete(preparationSessions).where(eq(preparationSessions.id, id));
+    await db.delete(preparationSessions).where(eq(preparationSessions.id, parseInt(id)));
   }
 
   // Interviews
@@ -268,9 +276,17 @@ export class DatabaseStorage implements IStorage {
     const [interview] = await db
       .select()
       .from(interviews)
-      .where(eq(interviews.id, id))
+      .where(eq(interviews.id, parseInt(id)))
       .limit(1);
-    return interview;
+    
+    if (!interview) return undefined;
+    
+    return {
+      ...interview,
+      interviewDate: interview.interviewDate?.toISOString() || null,
+      createdAt: interview.createdAt.toISOString(),
+      updatedAt: interview.updatedAt.toISOString()
+    };
   }
 
   async getInterviews(
@@ -282,45 +298,66 @@ export class DatabaseStorage implements IStorage {
       toDate?: Date;
     } = {}
   ): Promise<Interview[]> {
-    const whereClause = and(
-      eq(interviews.userId, userId),
-      filters.status ? eq(interviews.status, filters.status) : undefined,
-      filters.stage ? eq(interviews.interviewStage, filters.stage) : undefined,
-      filters.fromDate ? gte(interviews.interviewDate, filters.fromDate) : undefined,
-      filters.toDate ? lte(interviews.interviewDate, filters.toDate) : undefined
-    );
-
-    return await db
+    const whereConditions = [eq(interviews.userId, userId)];
+    
+    if (filters.status) {
+      whereConditions.push(eq(interviews.status, filters.status));
+    }
+    if (filters.stage) {
+      whereConditions.push(eq(interviews.interviewStage, filters.stage));
+    }
+    if (filters.fromDate) {
+      whereConditions.push(gte(interviews.interviewDate, filters.fromDate));
+    }
+    if (filters.toDate) {
+      whereConditions.push(lte(interviews.interviewDate, filters.toDate));
+    }
+    
+    const interviewsList = await db
       .select()
       .from(interviews)
-      .where(whereClause)
+      .where(and(...whereConditions))
       .orderBy(desc(interviews.interviewDate));
+    
+    return interviewsList.map(interview => ({
+      ...interview,
+      interviewDate: interview.interviewDate?.toISOString() || null,
+      createdAt: interview.createdAt.toISOString(),
+      updatedAt: interview.updatedAt.toISOString()
+    }));
   }
 
   async createInterview(interview: InsertInterview): Promise<Interview> {
-    const interviewWithId = {
-      ...interview,
-      id: randomUUID()
-    };
-    
     const [newInterview] = await db
       .insert(interviews)
-      .values(interviewWithId)
+      .values(interview)
       .returning();
-    return newInterview;
+    
+    return {
+      ...newInterview,
+      interviewDate: newInterview.interviewDate?.toISOString() || null,
+      createdAt: newInterview.createdAt.toISOString(),
+      updatedAt: newInterview.updatedAt.toISOString()
+    };
   }
 
   async updateInterview(id: string, interview: Partial<InsertInterview>): Promise<Interview> {
     const [updatedInterview] = await db
       .update(interviews)
-      .set({ ...interview, updatedAt: new Date() })
-      .where(eq(interviews.id, id))
+      .set(interview)
+      .where(eq(interviews.id, parseInt(id)))
       .returning();
-    return updatedInterview;
+    
+    return {
+      ...updatedInterview,
+      interviewDate: updatedInterview.interviewDate?.toISOString() || null,
+      createdAt: updatedInterview.createdAt.toISOString(),
+      updatedAt: updatedInterview.updatedAt.toISOString()
+    };
   }
 
   async deleteInterview(id: string): Promise<void> {
-    await db.delete(interviews).where(eq(interviews.id, id));
+    await db.delete(interviews).where(eq(interviews.id, parseInt(id)));
   }
 
   // Assessments
@@ -328,8 +365,9 @@ export class DatabaseStorage implements IStorage {
     const [assessment] = await db
       .select()
       .from(assessments)
-      .where(eq(assessments.id, id))
+      .where(eq(assessments.id, parseInt(id)))
       .limit(1);
+    
     return assessment;
   }
 
@@ -342,15 +380,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createAssessment(assessment: InsertAssessment): Promise<Assessment> {
-    const assessmentWithId = {
-      ...assessment,
-      id: randomUUID()
-    };
-    
     const [newAssessment] = await db
       .insert(assessments)
-      .values(assessmentWithId)
+      .values(assessment)
       .returning();
+    
     return newAssessment;
   }
 
@@ -358,13 +392,14 @@ export class DatabaseStorage implements IStorage {
     const [updatedAssessment] = await db
       .update(assessments)
       .set(assessment)
-      .where(eq(assessments.id, id))
+      .where(eq(assessments.id, parseInt(id)))
       .returning();
+    
     return updatedAssessment;
   }
 
   async deleteAssessment(id: string): Promise<void> {
-    await db.delete(assessments).where(eq(assessments.id, id));
+    await db.delete(assessments).where(eq(assessments.id, parseInt(id)));
   }
 
   // Reminders
@@ -376,45 +411,60 @@ export class DatabaseStorage implements IStorage {
       toDate?: Date;
     } = {}
   ): Promise<Reminder[]> {
-    const whereClause = and(
-      eq(reminders.userId, userId),
-      filters.completed !== undefined ? eq(reminders.completed, filters.completed) : undefined,
-      filters.fromDate ? gte(reminders.dueDate, filters.fromDate) : undefined,
-      filters.toDate ? lte(reminders.dueDate, filters.toDate) : undefined
-    );
-
-    return await db
+    const whereConditions = [eq(reminders.userId, userId)];
+    
+    if (filters.completed !== undefined) {
+      whereConditions.push(eq(reminders.completed, filters.completed));
+    }
+    if (filters.fromDate) {
+      whereConditions.push(gte(reminders.dueDate, filters.fromDate));
+    }
+    if (filters.toDate) {
+      whereConditions.push(lte(reminders.dueDate, filters.toDate));
+    }
+    
+    const remindersList = await db
       .select()
       .from(reminders)
-      .where(whereClause)
+      .where(and(...whereConditions))
       .orderBy(asc(reminders.dueDate));
+    
+    return remindersList.map(reminder => ({
+      ...reminder,
+      dueDate: reminder.dueDate.toISOString(),
+      createdAt: reminder.createdAt.toISOString()
+    }));
   }
 
   async createReminder(reminder: Omit<InsertReminder, 'id' | 'createdAt'>): Promise<Reminder> {
-    const newReminder = {
-      ...reminder,
-      id: randomUUID(),
-      createdAt: new Date()
-    };
-    
     const [createdReminder] = await db
       .insert(reminders)
-      .values(newReminder)
+      .values(reminder)
       .returning();
-    return createdReminder;
+    
+    return {
+      ...createdReminder,
+      dueDate: createdReminder.dueDate.toISOString(),
+      createdAt: createdReminder.createdAt.toISOString()
+    };
   }
 
   async updateReminder(id: string, reminder: Partial<Omit<InsertReminder, 'id' | 'userId' | 'createdAt'>>): Promise<Reminder> {
     const [updatedReminder] = await db
       .update(reminders)
       .set(reminder)
-      .where(eq(reminders.id, id))
+      .where(eq(reminders.id, parseInt(id)))
       .returning();
-    return updatedReminder;
+    
+    return {
+      ...updatedReminder,
+      dueDate: updatedReminder.dueDate.toISOString(),
+      createdAt: updatedReminder.createdAt.toISOString()
+    };
   }
 
   async deleteReminder(id: string): Promise<void> {
-    await db.delete(reminders).where(eq(reminders.id, id));
+    await db.delete(reminders).where(eq(reminders.id, parseInt(id)));
   }
 
   // Analytics
@@ -425,71 +475,59 @@ export class DatabaseStorage implements IStorage {
     successRate: number;
   }> {
     try {
-      // Get total applications count
+      // Get total applications
       const [{ count: totalApplications }] = await db
         .select({ count: count(applications.id) })
         .from(applications)
         .where(eq(applications.userId, userId));
 
-      // Get active interviews count
+      // Get active interviews (status not 'Completed' or 'Cancelled')
       const [{ count: activeInterviews }] = await db
         .select({ count: count(interviews.id) })
         .from(interviews)
-        .where(and(
-          eq(interviews.userId, userId),
-          ne(interviews.status, 'Completed'),
-          ne(interviews.status, 'Cancelled')
-        ));
+        .where(
+          and(
+            eq(interviews.userId, userId),
+            ne(interviews.status, 'Completed'),
+            ne(interviews.status, 'Cancelled')
+          )
+        );
 
-      // Calculate prep streak (consecutive days with preparation sessions in the last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const prepSessions = await db
-        .select({ date: preparationSessions.date })
-        .from(preparationSessions)
-        .where(and(
-          eq(preparationSessions.userId, userId),
-          gte(preparationSessions.date, thirtyDaysAgo.toISOString().split('T')[0])
-        ))
-        .orderBy(desc(preparationSessions.date));
+      // Get current streak
+      const [streakData] = await db
+        .select()
+        .from(streaks)
+        .where(eq(streaks.userId, userId))
+        .limit(1);
 
-      // Calculate streak
-      let prepStreak = 0;
-      const uniqueDates = [...new Set(prepSessions.map(s => s.date))].sort().reverse();
-      const today = new Date().toISOString().split('T')[0];
-      
-      for (let i = 0; i < uniqueDates.length; i++) {
-        const expectedDate = new Date();
-        expectedDate.setDate(expectedDate.getDate() - i);
-        const expectedDateStr = expectedDate.toISOString().split('T')[0];
-        
-        if (uniqueDates[i] === expectedDateStr) {
-          prepStreak++;
-        } else {
-          break;
-        }
-      }
+      const prepStreak = streakData?.currentStreak || 0;
 
-      // Calculate success rate (offers / total applications)
-      const [{ count: totalOffers }] = await db
-        .select({ count: count(applications.id) })
-        .from(applications)
-        .where(and(
-          eq(applications.userId, userId),
-          eq(applications.jobStatus, 'Offer')
-        ));
+      // Calculate success rate (interviews with status 'Completed' / total interviews)
+      const [{ count: completedInterviews }] = await db
+        .select({ count: count(interviews.id) })
+        .from(interviews)
+        .where(
+          and(
+            eq(interviews.userId, userId),
+            eq(interviews.status, 'Completed')
+          )
+        );
 
-      const successRate = totalApplications > 0 ? Math.round((totalOffers / totalApplications) * 100) : 0;
+      const [{ count: totalInterviews }] = await db
+        .select({ count: count(interviews.id) })
+        .from(interviews)
+        .where(eq(interviews.userId, userId));
+
+      const successRate = totalInterviews > 0 ? (completedInterviews / totalInterviews) * 100 : 0;
 
       return {
         totalApplications,
         activeInterviews,
         prepStreak,
-        successRate
+        successRate: Math.round(successRate)
       };
     } catch (error) {
-      console.error('Error getting dashboard stats:', error);
+      console.error('Error fetching dashboard stats:', error);
       return {
         totalApplications: 0,
         activeInterviews: 0,
@@ -500,298 +538,200 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getWeeklyPrepTime(userId: string): Promise<{ date: string; hours: number }[]> {
-    try {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-      
-      const sessions = await db
-        .select({
-          date: preparationSessions.date,
-          score: preparationSessions.confidenceScore
-        })
-        .from(preparationSessions)
-        .where(and(
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+
+    const sessions = await db
+      .select({
+        date: preparationSessions.date,
+        confidenceScore: preparationSessions.confidenceScore
+      })
+      .from(preparationSessions)
+      .where(
+        and(
           eq(preparationSessions.userId, userId),
-          gte(preparationSessions.date, sevenDaysAgo.toISOString().split('T')[0])
-        ))
-        .orderBy(asc(preparationSessions.date));
+          gte(preparationSessions.date, startDate.toISOString().split('T')[0]),
+          lte(preparationSessions.date, endDate.toISOString().split('T')[0])
+        )
+      );
 
-      // Group by date and calculate estimated hours (assuming each session is ~1-2 hours)
-      const dailyHours: { [key: string]: number } = {};
-      
-      sessions.forEach(session => {
-        const date = session.date;
-        if (!dailyHours[date]) {
-          dailyHours[date] = 0;
-        }
-        dailyHours[date] += 1.5; // Assume 1.5 hours per session
-      });
+    // Group by date and calculate estimated hours (assuming 30 minutes per session)
+    const dailyHours: { [key: string]: number } = {};
+    sessions.forEach(session => {
+      const date = session.date;
+      dailyHours[date] = (dailyHours[date] || 0) + 0.5; // 30 minutes per session
+    });
 
-      // Fill in missing days with 0 hours
-      const result: { date: string; hours: number }[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        result.push({
-          date: dateStr,
-          hours: dailyHours[dateStr] || 0
-        });
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error getting weekly prep time:', error);
-      return [];
-    }
+    return Object.entries(dailyHours).map(([date, hours]) => ({
+      date,
+      hours: Math.round(hours * 10) / 10
+    }));
   }
 
   async getConfidenceTrends(userId: string): Promise<{ topic: string; score: number }[]> {
-    try {
-      // Use preparationSessions since it has the topic and confidenceScore fields
-      const sessions = await db
-        .select({
-          topic: preparationSessions.topic,
-          score: preparationSessions.confidenceScore
-        })
-        .from(preparationSessions)
-        .where(and(
+    const sessions = await db
+      .select({
+        topicId: preparationSessions.topicId,
+        confidenceScore: preparationSessions.confidenceScore
+      })
+      .from(preparationSessions)
+      .where(
+        and(
           eq(preparationSessions.userId, userId),
           isNotNull(preparationSessions.confidenceScore)
-        ))
-        .orderBy(desc(preparationSessions.date))
-        .limit(10);
+        )
+      )
+      .orderBy(desc(preparationSessions.createdAt))
+      .limit(50);
 
-      // Group by topic and get average score
-      const topicScores: { [key: string]: number[] } = {};
-      
-      sessions.forEach(session => {
-        if (session.score !== null) {
-          if (!topicScores[session.topic]) {
-            topicScores[session.topic] = [];
-          }
-          topicScores[session.topic].push(session.score);
+    // Group by topic and calculate average confidence
+    const topicScores: { [key: number]: number[] } = {};
+    sessions.forEach(session => {
+      if (session.confidenceScore !== null) {
+        if (!topicScores[session.topicId]) {
+          topicScores[session.topicId] = [];
         }
-      });
+        topicScores[session.topicId].push(session.confidenceScore);
+      }
+    });
 
-      // Calculate average scores
-      return Object.entries(topicScores).map(([topic, scores]) => ({
-        topic,
-        score: Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
-      }));
-    } catch (error) {
-      console.error('Error getting confidence trends:', error);
-      return [];
-    }
+    return Object.entries(topicScores).map(([topicId, scores]) => ({
+      topic: `Topic ${topicId}`,
+      score: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+    }));
   }
 
-  // Gamification Implementation
+  // Gamification - Streaks
   async getStreak(userId: string) {
-    try {
-      const cacheKey = cache.generateKey('streak', userId);
-      const cached = await cache.get(cacheKey);
-      if (cached) return cached;
+    const [streak] = await db
+      .select()
+      .from(streaks)
+      .where(eq(streaks.userId, userId))
+      .limit(1);
 
-      const result = await db.select().from(streaks).where(eq(streaks.userId, userId));
-      
-      if (result.length === 0) {
-        // Create initial streak record
-        const newStreak = await db.insert(streaks).values({
+    if (!streak) {
+      // Create default streak record
+      const [newStreak] = await db
+        .insert(streaks)
+        .values({
           userId,
           currentStreak: 0,
           longestStreak: 0,
           totalPoints: 0,
           level: 1
-        }).returning();
-        await cache.set(cacheKey, newStreak[0]);
-        return newStreak[0];
-      }
-
-      await cache.set(cacheKey, result[0]);
-      return result[0];
-    } catch (error) {
-      console.error('Error getting streak:', error);
-      throw error;
+        })
+        .returning();
+      
+      return newStreak;
     }
+
+    return streak;
   }
 
   async updateStreak(userId: string, data: any) {
-    try {
-      const result = await db.update(streaks)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(streaks.userId, userId))
-        .returning();
+    const [updatedStreak] = await db
+      .update(streaks)
+      .set(data)
+      .where(eq(streaks.userId, userId))
+      .returning();
 
-      const cacheKey = cache.generateKey('streak', userId);
-      await cache.del(cacheKey);
-      
-      return result[0];
-    } catch (error) {
-      console.error('Error updating streak:', error);
-      throw error;
-    }
+    return updatedStreak;
   }
 
+  // Gamification - Daily Goals
   async getDailyGoals(userId: string) {
-    try {
-      const cacheKey = cache.generateKey('daily-goals', userId);
-      const cached = await cache.get(cacheKey);
-      if (cached) return cached;
-
-      const result = await db.select().from(dailyGoals)
-        .where(and(eq(dailyGoals.userId, userId), eq(dailyGoals.isActive, true)))
-        .orderBy(desc(dailyGoals.createdAt));
-
-      await cache.set(cacheKey, result, 300); // 5 minute cache
-      return result;
-    } catch (error) {
-      console.error('Error getting daily goals:', error);
-      throw error;
-    }
+    return await db
+      .select()
+      .from(dailyGoals)
+      .where(eq(dailyGoals.userId, userId))
+      .orderBy(desc(dailyGoals.createdAt));
   }
 
   async createDailyGoal(goal: any) {
-    try {
-      const result = await db.insert(dailyGoals).values({
-        ...goal,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+    const [newGoal] = await db
+      .insert(dailyGoals)
+      .values(goal)
+      .returning();
 
-      // Clear cache
-      const cacheKey = cache.generateKey('daily-goals', goal.userId);
-      await cache.del(cacheKey);
-
-      return result[0];
-    } catch (error) {
-      console.error('Error creating daily goal:', error);
-      throw error;
-    }
+    return newGoal;
   }
 
   async updateDailyGoal(id: string, goal: any) {
-    try {
-      const result = await db.update(dailyGoals)
-        .set({ ...goal, updatedAt: new Date() })
-        .where(eq(dailyGoals.id, parseInt(id)))
-        .returning();
+    const [updatedGoal] = await db
+      .update(dailyGoals)
+      .set(goal)
+      .where(eq(dailyGoals.id, parseInt(id)))
+      .returning();
 
-      return result[0];
-    } catch (error) {
-      console.error('Error updating daily goal:', error);
-      throw error;
-    }
+    return updatedGoal;
   }
 
   async deleteDailyGoal(id: string) {
-    try {
-      await db.update(dailyGoals)
-        .set({ isActive: false, updatedAt: new Date() })
-        .where(eq(dailyGoals.id, parseInt(id)));
-    } catch (error) {
-      console.error('Error deleting daily goal:', error);
-      throw error;
-    }
+    await db.delete(dailyGoals).where(eq(dailyGoals.id, parseInt(id)));
   }
 
+  // Gamification - Daily Activities
   async getDailyActivities(userId: string, date?: string) {
-    try {
-      const targetDate = date || new Date().toISOString().split('T')[0];
-      const cacheKey = cache.generateKey('daily-activities', userId, targetDate);
-      const cached = await cache.get(cacheKey);
-      if (cached) return cached;
-
-      const result = await db.select().from(dailyActivities)
-        .where(and(
-          eq(dailyActivities.userId, userId),
-          eq(dailyActivities.activityDate, targetDate)
-        ))
-        .orderBy(desc(dailyActivities.createdAt));
-
-      await cache.set(cacheKey, result, 600); // 10 minute cache
-      return result;
-    } catch (error) {
-      console.error('Error getting daily activities:', error);
-      throw error;
+    const whereConditions = [eq(dailyActivities.userId, userId)];
+    
+    if (date) {
+      whereConditions.push(eq(dailyActivities.activityDate, date));
     }
+
+    return await db
+      .select()
+      .from(dailyActivities)
+      .where(and(...whereConditions))
+      .orderBy(desc(dailyActivities.activityDate));
   }
 
   async createDailyActivity(activity: any) {
-    try {
-      const result = await db.insert(dailyActivities).values({
-        ...activity,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+    const [newActivity] = await db
+      .insert(dailyActivities)
+      .values(activity)
+      .returning();
 
-      // Clear related caches
-      const cacheKey = cache.generateKey('daily-activities', activity.userId, activity.activityDate);
-      await cache.del(cacheKey);
-      await cache.del(cache.generateKey('streak', activity.userId));
-
-      return result[0];
-    } catch (error) {
-      console.error('Error creating daily activity:', error);
-      throw error;
-    }
+    return newActivity;
   }
 
   async updateDailyActivity(id: string, activity: any) {
-    try {
-      const result = await db.update(dailyActivities)
-        .set({ ...activity, updatedAt: new Date() })
-        .where(eq(dailyActivities.id, parseInt(id)))
-        .returning();
+    const [updatedActivity] = await db
+      .update(dailyActivities)
+      .set(activity)
+      .where(eq(dailyActivities.id, parseInt(id)))
+      .returning();
 
-      return result[0];
-    } catch (error) {
-      console.error('Error updating daily activity:', error);
-      throw error;
-    }
+    return updatedActivity;
   }
 
+  // Gamification - Achievements
   async getAchievements(userId: string) {
-    try {
-      const cacheKey = cache.generateKey('achievements', userId);
-      const cached = await cache.get(cacheKey);
-      if (cached) return cached;
-
-      const result = await db.select().from(achievements)
-        .where(eq(achievements.userId, userId))
-        .orderBy(desc(achievements.unlockedAt));
-
-      await cache.set(cacheKey, result, 3600); // 1 hour cache
-      return result;
-    } catch (error) {
-      console.error('Error getting achievements:', error);
-      throw error;
-    }
+    return await db
+      .select()
+      .from(achievements)
+      .where(eq(achievements.userId, userId))
+      .orderBy(desc(achievements.unlockedAt));
   }
 
   async createAchievement(achievement: any) {
-    try {
-      const result = await db.insert(achievements).values({
-        ...achievement,
-        unlockedAt: new Date()
-      }).returning();
+    const [newAchievement] = await db
+      .insert(achievements)
+      .values(achievement)
+      .returning();
 
-      // Clear cache
-      const cacheKey = cache.generateKey('achievements', achievement.userId);
-      await cache.del(cacheKey);
-
-      return result[0];
-    } catch (error) {
-      console.error('Error creating achievement:', error);
-      throw error;
-    }
+    return newAchievement;
   }
 
   async checkAndUnlockAchievements(userId: string) {
-    // This will be implemented with the achievement system logic
+    // This is a placeholder implementation
+    // In a real implementation, you would check various conditions
+    // and unlock achievements based on user progress
     return [];
   }
 }
 
+// Export a singleton instance
 export const storage = new DatabaseStorage();
 
 // Export gamification tables for API routes
